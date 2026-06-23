@@ -8,7 +8,7 @@
     "dev": "govuk-prototype-kit dev",
     "serve": "govuk-prototype-kit serve",
     "start": "govuk-prototype-kit start",
-    "postinstall": "npm --prefix node_modules/govuk-prototype-kit install body-parser@1.20.5 express@4.22.2 qs@6.15.2 universal-analytics@0.5.4 --no-package-lock --ignore-scripts --no-audit --no-fund",
+    "postinstall": "npm --prefix node_modules/govuk-prototype-kit install body-parser@1.20.5 express@4.22.2 qs@6.15.2 universal-analytics@0.5.4 form-data@2.5.6 ws@8.21.0 --no-package-lock --ignore-scripts --no-audit --no-fund",
     "format": "prettier --write \"**/*.{cjs,js,json,md}\"",
     "format:check": "prettier --check \"**/*.{cjs,js,json,md}\""
   },
