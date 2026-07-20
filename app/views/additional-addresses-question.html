@@ -1,0 +1,40 @@
+{% extends "layouts/main.html" %}
+
+{% from "govuk/components/radios/macro.njk" import govukRadios %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+
+{% set pageName = "Do you need to add any additional business addresses?" %}
+{% set backLink = "/assurance-schemes" %}
+
+{% block content %}
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+
+    <form method="post" action="/additional-addresses-question" novalidate>
+
+      {{ govukRadios({
+        name: "add-additional",
+        fieldset: {
+          legend: {
+            text: "Do you need to add any additional business addresses?",
+            isPageHeading: true,
+            classes: "govuk-fieldset__legend--l"
+          }
+        },
+        hint: {
+          text: "You must register any additional address where you store PPPs and adjuvants. Do not add addresses where you store or apply PPPs for clients on their land."
+        },
+        classes: "govuk-radios--inline",
+        items: [
+          { value: "yes", text: "Yes", checked: checked("add-additional", "yes") },
+          { value: "no", text: "No", checked: checked("add-additional", "no") }
+        ]
+      }) }}
+
+      {{ govukButton({ text: "Continue" }) }}
+
+    </form>
+
+  </div>
+</div>
+{% endblock %}

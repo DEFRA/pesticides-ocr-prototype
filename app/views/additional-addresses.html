@@ -1,0 +1,73 @@
+{% extends "layouts/main.html" %}
+
+{% from "govuk/components/summary-list/macro.njk" import govukSummaryList %}
+{% from "govuk/components/radios/macro.njk" import govukRadios %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+
+{% set pageName = "Additional business addresses" %}
+{% set backLink = "/additional-addresses-question" %}
+
+{% set activityLabels = { "use": "Use PPPs", "store": "Store PPPs", "keep-records": "Keep PPP records" } %}
+
+{% block content %}
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+
+    <h1 class="govuk-heading-xl">Additional business addresses</h1>
+
+    {% for address in data.additionalAddresses %}
+      {% set i = loop.index %}
+
+      {% set addressHtml %}
+        {{ address.line1 }}{% if address.line2 %}<br>{{ address.line2 }}{% endif %}<br>{{ address.town }}<br>{{ address.postcode }}<br>{{ address.country }}
+      {% endset %}
+
+      {% set activityHtml %}
+        {% for a in address.activity %}{{ activityLabels[a] }}{% if not loop.last %}<br>{% endif %}{% endfor %}
+      {% endset %}
+
+      {{ govukSummaryList({
+        card: {
+          title: { text: "Additional address " + i },
+          actions: {
+            items: [
+              { href: "/additional-addresses/remove/" + (i - 1), text: "Remove", visuallyHiddenText: "additional address " + i }
+            ]
+          }
+        },
+        rows: [
+          { key: { text: "Business name" }, value: { text: address.businessName }, actions: { items: [{ href: "#", text: "Change", visuallyHiddenText: "business name" }] } },
+          { key: { text: "Main address" }, value: { html: addressHtml }, actions: { items: [{ href: "#", text: "Change", visuallyHiddenText: "address" }] } },
+          { key: { text: "Name" }, value: { text: address.contactName }, actions: { items: [{ href: "#", text: "Change", visuallyHiddenText: "name" }] } },
+          { key: { text: "Email" }, value: { text: address.contactEmail }, actions: { items: [{ href: "#", text: "Change", visuallyHiddenText: "email" }] } },
+          { key: { text: "Telephone" }, value: { text: address.contactTelephone }, actions: { items: [{ href: "#", text: "Change", visuallyHiddenText: "telephone" }] } },
+          { key: { text: "PPP activity" }, value: { html: activityHtml }, actions: { items: [{ href: "#", text: "Change", visuallyHiddenText: "PPP activity" }] } }
+        ]
+      }) }}
+
+    {% endfor %}
+
+    <form method="post" action="/additional-addresses" novalidate>
+
+      {{ govukRadios({
+        name: "add-another",
+        fieldset: {
+          legend: {
+            text: "Do you want to add another address?",
+            isPageHeading: true,
+            classes: "govuk-fieldset__legend--m"
+          }
+        },
+        items: [
+          { value: "yes", text: "Yes" },
+          { value: "no", text: "No" }
+        ]
+      }) }}
+
+      {{ govukButton({ text: "Continue" }) }}
+
+    </form>
+
+  </div>
+</div>
+{% endblock %}

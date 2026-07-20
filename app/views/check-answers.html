@@ -1,0 +1,99 @@
+{% extends "layouts/main.html" %}
+
+{% from "govuk/components/summary-list/macro.njk" import govukSummaryList %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+
+{% set pageName = "Check your details" %}
+
+{# Amateur-only sellers reach this page straight from Quantity; everyone else via the additional-addresses step #}
+{% set acts = data.activities if data.activities is not string else [data.activities] %}
+{% set amateurOnly = acts and acts | length == 1 and "sell-amateur" in acts %}
+{% set backLink = "/quantity" if amateurOnly else "/additional-addresses-question" %}
+
+{% set activityLabels = { "manufacture": "Manufacture", "place-on-market": "Distribute", "sell-professional": "Sell professional PPPs", "sell-amateur": "Sell amateur PPPs", "use-professional": "Use professional PPPs" } %}
+{% set customerLabels = { "professional": "Professional users", "amateur": "Amateur users", "both": "Professional and amateur sellers" } %}
+{% set addressActivityLabels = { "use": "Use PPPs", "store": "Store PPPs", "keep-records": "Keep PPP records" } %}
+{% set sectorLabels = { "agriculture": "Agriculture and horticulture", "amenity": "Amenity", "forestry": "Forestry" } %}
+{% set assuranceLabels = { "red-tractor": "Red Tractor", "leaf-marque": "LEAF Marque", "soil-association": "Soil Association Organic", "sqc": "Scottish Quality Crops (SQC)" } %}
+
+{% macro listValues(value, labels) %}
+  {%- if value -%}
+    {%- if value is string -%}{{ labels[value] }}
+    {%- else -%}{% for v in value %}{{ labels[v] }}{% if not loop.last %}<br>{% endif %}{% endfor %}
+    {%- endif -%}
+  {%- endif -%}
+{% endmacro %}
+
+{% block content %}
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+
+    <h1 class="govuk-heading-xl">Check your details</h1>
+
+    <h2 class="govuk-heading-m">Business details</h2>
+
+    {% set businessActivitiesHtml %}{{ listValues(data.activities, activityLabels) }}{% endset %}
+    {% set mainAddressHtml %}{{ data["address-line-1"] }}{% if data["address-line-2"] %}<br>{{ data["address-line-2"] }}{% endif %}<br>{{ data["address-town"] }}<br>{{ data["address-postcode"] }}<br>{{ data["address-country"] }}{% endset %}
+
+    {% set businessRows = [] %}
+    {% set businessRows = (businessRows.push({ key: { text: "Business PPP activities" }, value: { html: businessActivitiesHtml }, actions: { items: [{ href: "/activities", text: "Change", visuallyHiddenText: "business PPP activities" }] } }), businessRows) %}
+    {% if data["main-customer"] %}
+      {% set businessRows = (businessRows.push({ key: { text: "Main customer" }, value: { text: customerLabels[data["main-customer"]] }, actions: { items: [{ href: "/main-customer", text: "Change", visuallyHiddenText: "main customer" }] } }), businessRows) %}
+    {% endif %}
+    {% set businessRows = (businessRows.push({ key: { text: "Business name" }, value: { text: data["business-name"] }, actions: { items: [{ href: "/business-name", text: "Change", visuallyHiddenText: "business name" }] } }), businessRows) %}
+    {% set businessRows = (businessRows.push({ key: { text: "Main address" }, value: { html: mainAddressHtml }, actions: { items: [{ href: "/main-address", text: "Change", visuallyHiddenText: "main address" }] } }), businessRows) %}
+    {% set businessRows = (businessRows.push({ key: { text: "Name" }, value: { text: data["contact-name"] }, actions: { items: [{ href: "/contact-details", text: "Change", visuallyHiddenText: "name" }] } }), businessRows) %}
+    {% set businessRows = (businessRows.push({ key: { text: "Email" }, value: { text: data["contact-email"] }, actions: { items: [{ href: "/contact-details", text: "Change", visuallyHiddenText: "email" }] } }), businessRows) %}
+    {% set businessRows = (businessRows.push({ key: { text: "Telephone" }, value: { text: data["contact-telephone"] }, actions: { items: [{ href: "/contact-details", text: "Change", visuallyHiddenText: "telephone" }] } }), businessRows) %}
+
+    {{ govukSummaryList({ rows: businessRows }) }}
+
+    <h2 class="govuk-heading-m">PPP activity details</h2>
+
+    {% set addressActivityHtml %}{{ listValues(data["address-activity"], addressActivityLabels) }}{% endset %}
+    {% set sectorHtml %}{{ listValues(data.sector, sectorLabels) }}{% if data["sector-other"] %}{% if data.sector %}<br>{% endif %}{{ data["sector-other"] }}{% endif %}{% endset %}
+    {% set assuranceHtml %}{{ listValues(data.assurance, assuranceLabels) }}{% if data["assurance-other"] %}{% if data.assurance %}<br>{% endif %}{{ data["assurance-other"] }}{% endif %}{% endset %}
+
+    {% set pppRows = [] %}
+    {% set pppRows = (pppRows.push({ key: { text: "PPP activities at the address" }, value: { html: addressActivityHtml }, actions: { items: [{ href: "/activity-at-address", text: "Change", visuallyHiddenText: "PPP activities at the address" }] } }), pppRows) %}
+    {% set pppRows = (pppRows.push({ key: { text: "Quantity of PPPs used in the last year" }, value: { text: data.quantity + " Kgs" if data.quantity else "" }, actions: { items: [{ href: "/quantity", text: "Change", visuallyHiddenText: "quantity of PPPs" }] } }), pppRows) %}
+    {% if data.sector or data["sector-other"] %}
+      {% set pppRows = (pppRows.push({ key: { text: "Main sector of work" }, value: { html: sectorHtml }, actions: { items: [{ href: "/sector", text: "Change", visuallyHiddenText: "main sector of work" }] } }), pppRows) %}
+    {% endif %}
+    {% if data.assurance or data["assurance-other"] %}
+      {% set pppRows = (pppRows.push({ key: { text: "Assurance schemes" }, value: { html: assuranceHtml }, actions: { items: [{ href: "/assurance-schemes", text: "Change", visuallyHiddenText: "assurance schemes" }] } }), pppRows) %}
+    {% endif %}
+    {% set additionalCount = data.additionalAddresses | length if data.additionalAddresses else 0 %}
+    {% set pppRows = (pppRows.push({ key: { text: "Additional addresses" }, value: { text: (additionalCount + " added") if additionalCount else "None" }, actions: { items: [{ href: "/additional-addresses-question", text: "Change", visuallyHiddenText: "additional addresses" }] } }), pppRows) %}
+
+    {{ govukSummaryList({ rows: pppRows }) }}
+
+    {% if additionalCount %}
+      <h2 class="govuk-heading-m">Additional addresses</h2>
+
+      {% for address in data.additionalAddresses %}
+        {% set i = loop.index %}
+        {% set addAddressHtml %}{{ address.line1 }}{% if address.line2 %}<br>{{ address.line2 }}{% endif %}<br>{{ address.town }}<br>{{ address.postcode }}<br>{{ address.country }}{% endset %}
+        {% set addActivityHtml %}{% for a in address.activity %}{{ addressActivityLabels[a] }}{% if not loop.last %}<br>{% endif %}{% endfor %}{% endset %}
+
+        {{ govukSummaryList({
+          card: { title: { text: "Additional address " + i } },
+          rows: [
+            { key: { text: "Business name" }, value: { text: address.businessName }, actions: { items: [{ href: "#", text: "Change", visuallyHiddenText: "business name" }] } },
+            { key: { text: "Main address" }, value: { html: addAddressHtml }, actions: { items: [{ href: "#", text: "Change", visuallyHiddenText: "address" }] } },
+            { key: { text: "Name" }, value: { text: address.contactName }, actions: { items: [{ href: "#", text: "Change", visuallyHiddenText: "name" }] } },
+            { key: { text: "Email" }, value: { text: address.contactEmail }, actions: { items: [{ href: "#", text: "Change", visuallyHiddenText: "email" }] } },
+            { key: { text: "Telephone" }, value: { text: address.contactTelephone }, actions: { items: [{ href: "#", text: "Change", visuallyHiddenText: "telephone" }] } },
+            { key: { text: "PPP activity" }, value: { html: addActivityHtml }, actions: { items: [{ href: "#", text: "Change", visuallyHiddenText: "PPP activity" }] } }
+          ]
+        }) }}
+      {% endfor %}
+    {% endif %}
+
+    <form method="post" action="/check-answers" novalidate>
+      {{ govukButton({ text: "Continue" }) }}
+    </form>
+
+  </div>
+</div>
+{% endblock %}

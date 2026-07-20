@@ -1,0 +1,55 @@
+{% extends "layouts/main.html" %}
+
+{% from "govuk/components/checkboxes/macro.njk" import govukCheckboxes %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+
+{% set pageName = "What does your business do at this address?" %}
+{% set backLink = "/additional-address-contact" %}
+
+{% block content %}
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+
+    <form method="post" action="/additional-address-activity" novalidate>
+
+      {{ govukCheckboxes({
+        name: "add-activity",
+        fieldset: {
+          legend: {
+            text: "What does your business do at this address?",
+            isPageHeading: true,
+            classes: "govuk-fieldset__legend--l"
+          }
+        },
+        hint: {
+          text: "Select all that apply for " + (data["add-line-1"] if data["add-line-1"] else "this address") + "."
+        },
+        items: [
+          {
+            value: "use",
+            text: "Use plant protection products (PPPs) or adjuvants",
+            hint: { text: "This includes applying pesticides, weedkillers or tank-mix additives on site or on nearby land as part of your work." },
+            checked: checked("add-activity", "use")
+          },
+          {
+            value: "store",
+            text: "Store plant protection products (PPPs) or adjuvants",
+            hint: { text: "This includes keeping commercial or retail-ready chemicals in a designated store, warehouse, stockroom or chemical safe." },
+            checked: checked("add-activity", "store")
+          },
+          {
+            value: "keep-records",
+            text: "Keep records of plant protection products (PPPs)",
+            hint: { text: "This includes maintaining official acquisition, application, sale or disposal logs required for regulatory inspections." },
+            checked: checked("add-activity", "keep-records")
+          }
+        ]
+      }) }}
+
+      {{ govukButton({ text: "Continue" }) }}
+
+    </form>
+
+  </div>
+</div>
+{% endblock %}

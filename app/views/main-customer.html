@@ -1,0 +1,37 @@
+{% extends "layouts/main.html" %}
+
+{% from "govuk/components/radios/macro.njk" import govukRadios %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+
+{% set pageName = "Is your main customer a professional user or amateur user?" %}
+{% set backLink = "/activities" %}
+
+{% block content %}
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+
+    <form method="post" action="/main-customer" novalidate>
+
+      {{ govukRadios({
+        name: "main-customer",
+        fieldset: {
+          legend: {
+            text: "Is your main customer a professional user or amateur user?",
+            isPageHeading: true,
+            classes: "govuk-fieldset__legend--l"
+          }
+        },
+        items: [
+          { value: "professional", text: "Professional user", checked: checked("main-customer", "professional") },
+          { value: "amateur", text: "Amateur user", checked: checked("main-customer", "amateur") },
+          { value: "both", text: "Both professional and amateur users", checked: checked("main-customer", "both") }
+        ]
+      }) }}
+
+      {{ govukButton({ text: "Continue" }) }}
+
+    </form>
+
+  </div>
+</div>
+{% endblock %}

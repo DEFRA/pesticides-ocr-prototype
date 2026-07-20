@@ -1,0 +1,66 @@
+{% extends "layouts/main.html" %}
+
+{% from "govuk/components/checkboxes/macro.njk" import govukCheckboxes %}
+{% from "govuk/components/textarea/macro.njk" import govukTextarea %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+
+{% set pageName = "Are you a member of any official assurance schemes at this address? (optional)" %}
+{% set backLink = "/sector" %}
+
+{% block content %}
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+
+    <h1 class="govuk-heading-xl">Are you a member of any official assurance schemes at this address? (optional)</h1>
+
+    <form method="post" action="/assurance-schemes" novalidate>
+
+      {{ govukCheckboxes({
+        name: "assurance",
+        hint: { text: "Select all that apply." },
+        items: [
+          {
+            value: "red-tractor",
+            text: "Red Tractor",
+            hint: { text: "This includes Red Tractor Assurance for crops, fresh produce, sugar beet or salads." },
+            checked: checked("assurance", "red-tractor")
+          },
+          {
+            value: "leaf-marque",
+            text: "LEAF Marque",
+            hint: { text: "Linking Environment And Farming certification." },
+            checked: checked("assurance", "leaf-marque")
+          },
+          {
+            value: "soil-association",
+            text: "Soil Association Organic",
+            hint: { text: "This includes certified organic farming, growing or processing schemes." },
+            checked: checked("assurance", "soil-association")
+          },
+          {
+            value: "sqc",
+            text: "Scottish Quality Crops (SQC)",
+            hint: { text: "For businesses operating under Scottish quality crop assurance guidelines." },
+            checked: checked("assurance", "sqc")
+          }
+        ]
+      }) }}
+
+      <p class="govuk-body govuk-!-font-weight-bold">or</p>
+
+      {{ govukTextarea({
+        name: "assurance-other",
+        id: "assurance-other",
+        label: { text: "Other" },
+        hint: { text: "Enter the name of the assurance schemes you are a member of if not shown" },
+        rows: 3,
+        value: data["assurance-other"]
+      }) }}
+
+      {{ govukButton({ text: "Continue" }) }}
+
+    </form>
+
+  </div>
+</div>
+{% endblock %}

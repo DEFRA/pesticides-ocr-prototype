@@ -1,5 +1,5 @@
 {
-  "serviceName": "Pesticides OCR Prototype",
+  "serviceName": "OCR Register",
   "plugins": {
     "govuk-frontend": {
       "rebrand": true
