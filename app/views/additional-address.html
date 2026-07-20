@@ -3,6 +3,7 @@
 {% from "govuk/components/input/macro.njk" import govukInput %}
 {% from "govuk/components/radios/macro.njk" import govukRadios %}
 {% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
 
 {% set pageName = "Additional business address" %}
 {% set backLink = "/additional-addresses-question" %}
@@ -10,6 +11,8 @@
 {% block content %}
 <div class="govuk-grid-row">
   <div class="govuk-grid-column-two-thirds">
+
+    {% if errorList %}{{ govukErrorSummary({ titleText: "There is a problem", errorList: errorList }) }}{% endif %}
 
     <h1 class="govuk-heading-xl">Additional business address</h1>
     <p class="govuk-body">Enter the address that is most relevant to your professional PPP activity. This might be a head office, or where you keep your records. You can add other addresses later if you have them.</p>
@@ -21,6 +24,7 @@
         id: "add-line-1",
         name: "add-line-1",
         autocomplete: "address-line1",
+        errorMessage: { text: errors["add-line-1"] } if errors["add-line-1"],
         value: data["add-line-1"]
       }) }}
 
@@ -38,6 +42,7 @@
         name: "add-town",
         classes: "govuk-!-width-two-thirds",
         autocomplete: "address-level2",
+        errorMessage: { text: errors["add-town"] } if errors["add-town"],
         value: data["add-town"]
       }) }}
 
@@ -52,6 +57,7 @@
 
       {{ govukRadios({
         name: "add-country",
+        errorMessage: { text: errors["add-country"] } if errors["add-country"],
         fieldset: {
           legend: { text: "Country" }
         },
