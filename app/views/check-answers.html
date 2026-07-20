@@ -64,7 +64,10 @@
       {% set pppRows = (pppRows.push({ key: { text: "Assurance schemes" }, value: { html: assuranceHtml }, actions: { items: [{ href: "/assurance-schemes", text: "Change", visuallyHiddenText: "assurance schemes" }] } }), pppRows) %}
     {% endif %}
     {% set additionalCount = data.additionalAddresses | length if data.additionalAddresses else 0 %}
-    {% set pppRows = (pppRows.push({ key: { text: "Additional addresses" }, value: { text: (additionalCount + " added") if additionalCount else "None" }, actions: { items: [{ href: "/additional-addresses-question", text: "Change", visuallyHiddenText: "additional addresses" }] } }), pppRows) %}
+    {# The amateur-only journey has no additional-addresses step, so quantity is the last row #}
+    {% if not amateurOnly %}
+      {% set pppRows = (pppRows.push({ key: { text: "Additional addresses" }, value: { text: (additionalCount + " added") if additionalCount else "None" }, actions: { items: [{ href: "/additional-addresses-question", text: "Change", visuallyHiddenText: "additional addresses" }] } }), pppRows) %}
+    {% endif %}
 
     {{ govukSummaryList({ rows: pppRows }) }}
 
