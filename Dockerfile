@@ -27,6 +27,8 @@ USER node
 # CDP takes care of https in the nginx layer, so we don't need to force https in the app
 ENV USE_HTTPS=false
 ENV NODE_ENV=production
+# Disable basic auth so user researchers can open the prototype without a password
+ENV USE_AUTH=false
 
 COPY --from=development /home/node/package*.json ./
 COPY --from=development /home/node/app ./app/
