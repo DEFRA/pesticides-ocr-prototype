@@ -4,3 +4,22 @@ https://prototype-kit.service.gov.uk/docs/how-to-use-layouts
 #}
 
 {% extends "govuk-prototype-kit/layouts/govuk-branded.njk" %}
+
+{% from "govuk/components/phase-banner/macro.njk" import govukPhaseBanner %}
+{% from "govuk/components/back-link/macro.njk" import govukBackLink %}
+
+{% block beforeContent %}
+  {{ govukPhaseBanner({
+    tag: {
+      text: "Figma Prototype"
+    },
+    html: 'This is a new service – your <a class="govuk-link" href="#">feedback</a> will help us to improve it.'
+  }) }}
+
+  {% if backLink %}
+    {{ govukBackLink({
+      text: "Back",
+      href: backLink
+    }) }}
+  {% endif %}
+{% endblock %}

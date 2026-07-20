@@ -1,0 +1,35 @@
+{% extends "layouts/main.html" %}
+
+{% from "govuk/components/input/macro.njk" import govukInput %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+
+{% set pageName = "What is your business name?" %}
+
+{# Back goes to Main customer only if that question was asked, otherwise to Activities #}
+{% set acts = data.activities if data.activities is not string else [data.activities] %}
+{% set cameViaMainCustomer = acts and ("manufacture" in acts or "place-on-market" in acts or "sell-professional" in acts) %}
+{% set backLink = "/main-customer" if cameViaMainCustomer else "/activities" %}
+
+{% block content %}
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+
+    <h1 class="govuk-heading-xl">What is your business name?</h1>
+    <p class="govuk-body">We will use this to find your business details and registered address on Companies House.</p>
+
+    <form method="post" action="/business-name" novalidate>
+
+      {{ govukInput({
+        label: { text: "Enter your business or company name" },
+        id: "business-name",
+        name: "business-name",
+        value: data["business-name"]
+      }) }}
+
+      {{ govukButton({ text: "Continue" }) }}
+
+    </form>
+
+  </div>
+</div>
+{% endblock %}

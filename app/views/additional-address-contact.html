@@ -1,0 +1,50 @@
+{% extends "layouts/main.html" %}
+
+{% from "govuk/components/input/macro.njk" import govukInput %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+
+{% set pageName = "Contact details" %}
+{% set backLink = "/additional-address" %}
+
+{% block content %}
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+
+    <h1 class="govuk-heading-xl">Contact details</h1>
+    <p class="govuk-body">This should be the contact details of someone with a good knowledge of your professional PPP activity.</p>
+
+    <form method="post" action="/additional-address-contact" novalidate>
+
+      {{ govukInput({
+        label: { text: "Name" },
+        id: "add-contact-name",
+        name: "add-contact-name",
+        autocomplete: "name",
+        value: data["add-contact-name"]
+      }) }}
+
+      {{ govukInput({
+        label: { text: "Telephone number" },
+        id: "add-contact-telephone",
+        name: "add-contact-telephone",
+        type: "tel",
+        autocomplete: "tel",
+        value: data["add-contact-telephone"]
+      }) }}
+
+      {{ govukInput({
+        label: { text: "Email address" },
+        id: "add-contact-email",
+        name: "add-contact-email",
+        type: "email",
+        autocomplete: "email",
+        value: data["add-contact-email"]
+      }) }}
+
+      {{ govukButton({ text: "Continue" }) }}
+
+    </form>
+
+  </div>
+</div>
+{% endblock %}

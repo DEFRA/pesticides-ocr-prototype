@@ -1,0 +1,33 @@
+{% extends "layouts/main.html" %}
+
+{% from "govuk/components/input/macro.njk" import govukInput %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+
+{% set pageName = "What quantity of plant protection products (PPPs) or adjuvants do you use at this address in a typical year?" %}
+{% set backLink = "/activity-at-address" %}
+
+{% block content %}
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+
+    <h1 class="govuk-heading-xl">What quantity of plant protection products (PPPs) or adjuvants do you use at this address in a typical year?</h1>
+    <p class="govuk-body">Give an estimate of the total amount of undiluted product you use. If you use both liquid and solid products, combine them using 1 litre as roughly equal to 1 kilogram.</p>
+
+    <form method="post" action="/quantity" novalidate>
+
+      {{ govukInput({
+        label: { text: "Estimated annual quantity" },
+        id: "quantity",
+        name: "quantity",
+        classes: "govuk-input--width-5",
+        suffix: { text: "Kilograms or litres" },
+        value: data["quantity"]
+      }) }}
+
+      {{ govukButton({ text: "Continue" }) }}
+
+    </form>
+
+  </div>
+</div>
+{% endblock %}

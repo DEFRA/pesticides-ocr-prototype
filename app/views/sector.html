@@ -1,0 +1,60 @@
+{% extends "layouts/main.html" %}
+
+{% from "govuk/components/checkboxes/macro.njk" import govukCheckboxes %}
+{% from "govuk/components/textarea/macro.njk" import govukTextarea %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+
+{% set pageName = "What is the main sector of your work involving PPPs or adjuvants?" %}
+{% set backLink = "/quantity" %}
+
+{% block content %}
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+
+    <h1 class="govuk-heading-xl">What is the main sector of your work involving PPPs or adjuvants?</h1>
+    <p class="govuk-body">Select the sector that best describes the type of land or setting where the chemicals are applied.</p>
+
+    <form method="post" action="/sector" novalidate>
+
+      {{ govukCheckboxes({
+        name: "sector",
+        items: [
+          {
+            value: "agriculture",
+            text: "Agriculture and horticulture",
+            hint: { text: "This includes farming, commercial fruit and vegetable growing, glasshouse production and managed nurseries." },
+            checked: checked("sector", "agriculture")
+          },
+          {
+            value: "amenity",
+            text: "Amenity",
+            hint: { text: "This includes managing public spaces, parks, sports grounds, golf courses, school fields, railway tracks, roadsides and industrial estates." },
+            checked: checked("sector", "amenity")
+          },
+          {
+            value: "forestry",
+            text: "Forestry",
+            hint: { text: "This includes managing woodlands, commercial timber forests, tree plantations and commercial woodland nurseries." },
+            checked: checked("sector", "forestry")
+          }
+        ]
+      }) }}
+
+      <p class="govuk-body govuk-!-font-weight-bold">or</p>
+
+      {{ govukTextarea({
+        name: "sector-other",
+        id: "sector-other",
+        label: { text: "Other" },
+        hint: { text: "Describe your main type of work in a few words" },
+        rows: 3,
+        value: data["sector-other"]
+      }) }}
+
+      {{ govukButton({ text: "Continue" }) }}
+
+    </form>
+
+  </div>
+</div>
+{% endblock %}
