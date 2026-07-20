@@ -3,6 +3,7 @@
 {% from "govuk/components/input/macro.njk" import govukInput %}
 {% from "govuk/components/radios/macro.njk" import govukRadios %}
 {% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
 
 {% set pageName = "Main business address" %}
 {% set backLink = "/business-name" %}
@@ -10,6 +11,8 @@
 {% block content %}
 <div class="govuk-grid-row">
   <div class="govuk-grid-column-two-thirds">
+
+    {% if errorList %}{{ govukErrorSummary({ titleText: "There is a problem", errorList: errorList }) }}{% endif %}
 
     <h1 class="govuk-heading-xl">Main business address</h1>
     <p class="govuk-body">Enter the address that is most relevant to your professional PPP activity. This might be a head office, or where you keep your records. You can add other addresses later if you have them.</p>
@@ -21,6 +24,7 @@
         id: "address-line-1",
         name: "address-line-1",
         autocomplete: "address-line1",
+        errorMessage: { text: errors["address-line-1"] } if errors["address-line-1"],
         value: data["address-line-1"]
       }) }}
 
@@ -38,6 +42,7 @@
         name: "address-town",
         classes: "govuk-!-width-two-thirds",
         autocomplete: "address-level2",
+        errorMessage: { text: errors["address-town"] } if errors["address-town"],
         value: data["address-town"]
       }) }}
 
@@ -47,11 +52,13 @@
         name: "address-postcode",
         classes: "govuk-input--width-10",
         autocomplete: "postal-code",
+        errorMessage: { text: errors["address-postcode"] } if errors["address-postcode"],
         value: data["address-postcode"]
       }) }}
 
       {{ govukRadios({
         name: "address-country",
+        errorMessage: { text: errors["address-country"] } if errors["address-country"],
         fieldset: {
           legend: { text: "Country" }
         },

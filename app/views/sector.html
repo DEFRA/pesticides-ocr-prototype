@@ -3,6 +3,7 @@
 {% from "govuk/components/checkboxes/macro.njk" import govukCheckboxes %}
 {% from "govuk/components/textarea/macro.njk" import govukTextarea %}
 {% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
 
 {% set pageName = "What is the main sector of your work involving PPPs or adjuvants?" %}
 {% set backLink = "/quantity" %}
@@ -11,6 +12,8 @@
 <div class="govuk-grid-row">
   <div class="govuk-grid-column-two-thirds">
 
+    {% if errorList %}{{ govukErrorSummary({ titleText: "There is a problem", errorList: errorList }) }}{% endif %}
+
     <h1 class="govuk-heading-xl">What is the main sector of your work involving PPPs or adjuvants?</h1>
     <p class="govuk-body">Select the sector that best describes the type of land or setting where the chemicals are applied.</p>
 
@@ -18,6 +21,7 @@
 
       {{ govukCheckboxes({
         name: "sector",
+        errorMessage: { text: errors["sector"] } if errors["sector"],
         items: [
           {
             value: "agriculture",

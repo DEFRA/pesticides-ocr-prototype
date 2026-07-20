@@ -2,6 +2,7 @@
 
 {% from "govuk/components/checkboxes/macro.njk" import govukCheckboxes %}
 {% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
 
 {% set pageName = "What are your business's activities with plant protection products (PPPs)?" %}
 {% set backLink = "/" %}
@@ -10,10 +11,13 @@
 <div class="govuk-grid-row">
   <div class="govuk-grid-column-two-thirds">
 
+    {% if errorList %}{{ govukErrorSummary({ titleText: "There is a problem", errorList: errorList }) }}{% endif %}
+
     <form method="post" action="/activities" novalidate>
 
       {{ govukCheckboxes({
         name: "activities",
+        errorMessage: { text: errors["activities"] } if errors["activities"],
         fieldset: {
           legend: {
             text: "What are your business’s activities with plant protection products (PPPs)?",

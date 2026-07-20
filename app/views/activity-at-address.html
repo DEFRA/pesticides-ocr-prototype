@@ -2,6 +2,7 @@
 
 {% from "govuk/components/checkboxes/macro.njk" import govukCheckboxes %}
 {% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
 
 {% set pageName = "What does your business do at this address?" %}
 {% set backLink = "/contact-details" %}
@@ -10,10 +11,13 @@
 <div class="govuk-grid-row">
   <div class="govuk-grid-column-two-thirds">
 
+    {% if errorList %}{{ govukErrorSummary({ titleText: "There is a problem", errorList: errorList }) }}{% endif %}
+
     <form method="post" action="/activity-at-address" novalidate>
 
       {{ govukCheckboxes({
         name: "address-activity",
+        errorMessage: { text: errors["address-activity"] } if errors["address-activity"],
         fieldset: {
           legend: {
             text: "What does your business do at this address?",
