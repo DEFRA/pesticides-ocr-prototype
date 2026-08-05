@@ -17,22 +17,26 @@
     {% set amountRevealHtml %}
       {{ govukInput({
         label: { text: "Estimated annual quantity" },
-        id: "quantity-amount",
-        name: "quantity-amount",
+        id: "quantity",
+        name: "quantity",
         classes: "govuk-input--width-10",
-        errorMessage: { text: errors["quantity-amount"] } if errors["quantity-amount"],
-        value: data["quantity-amount"]
+        inputmode: "numeric",
+        spellcheck: false,
+        errorMessage: { text: errors["quantity"] } if errors["quantity"],
+        value: data["quantity"]
       }) }}
     {% endset %}
 
     {% set areaRevealHtml %}
       {{ govukInput({
         label: { text: "Estimated annual area covered" },
-        id: "quantity-area",
-        name: "quantity-area",
+        id: "area",
+        name: "area",
         classes: "govuk-input--width-10",
-        errorMessage: { text: errors["quantity-area"] } if errors["quantity-area"],
-        value: data["quantity-area"]
+        inputmode: "numeric",
+        spellcheck: false,
+        errorMessage: { text: errors["area"] } if errors["area"],
+        value: data["area"]
       }) }}
     {% endset %}
 

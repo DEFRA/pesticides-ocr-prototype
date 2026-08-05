@@ -133,16 +133,16 @@ router.post('/quantity', (req, res) => {
   ]
   if (type === 'amount') {
     rules.push({
-      field: 'quantity-amount',
+      field: 'quantity',
       message: 'Enter an estimated annual quantity',
-      valid: filled(d['quantity-amount'])
+      valid: filled(d.quantity)
     })
   }
   if (type === 'area') {
     rules.push({
-      field: 'quantity-area',
+      field: 'area',
       message: 'Enter an estimated annual area covered',
-      valid: filled(d['quantity-area'])
+      valid: filled(d.area)
     })
   }
 
