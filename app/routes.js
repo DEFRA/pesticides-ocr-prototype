@@ -31,6 +31,11 @@ const SELLER_ACTIVITIES = ['manufacture', 'place-on-market', 'sell-professional'
 const isAmateurOnly = (activities) =>
   activities.length > 0 && activities.every((a) => a === 'sell-amateur')
 
+// Where the quantity page leads — also used when the quantity page is skipped:
+// amateur-only journeys go straight to check-answers, everyone else to sector.
+const afterQuantity = (activities) =>
+  isAmateurOnly(activities) ? '/check-answers' : '/sector'
+
 // --- Activities: validate, then decide whether to ask "main customer" ---
 router.post('/activities', (req, res) => {
   const activities = toArray(req.session.data.activities)
@@ -105,23 +110,46 @@ router.post('/activity-at-address', (req, res) => {
     }
   ])
   if (!v.ok) return res.render('activity-at-address', v)
-  res.redirect('/quantity')
+
+  // Only ask about quantity if they USE PPPs/adjuvants at this address. Storing
+  // or record-keeping alone doesn't need a quantity, so skip straight past it.
+  const addressActivity = toArray(req.session.data['address-activity'])
+  if (addressActivity.includes('use')) return res.redirect('/quantity')
+  res.redirect(afterQuantity(toArray(req.session.data.activities)))
 })
 
-// --- Quantity: validate, then branch (amateur-only skips sector) ---
+// --- Quantity: pick how to express it (amount or area), fill the revealed
+// field, then branch (amateur-only skips sector) ---
 router.post('/quantity', (req, res) => {
-  const v = validate([
+  const d = req.session.data
+  const type = d['quantity-type']
+
+  const rules = [
     {
-      field: 'quantity',
-      message: 'Enter an estimated annual quantity',
-      valid: filled(req.session.data.quantity)
+      field: 'quantity-type',
+      message: 'Select how you want to give the quantity',
+      valid: filled(type)
     }
-  ])
+  ]
+  if (type === 'amount') {
+    rules.push({
+      field: 'quantity-amount',
+      message: 'Enter an estimated annual quantity',
+      valid: filled(d['quantity-amount'])
+    })
+  }
+  if (type === 'area') {
+    rules.push({
+      field: 'quantity-area',
+      message: 'Enter an estimated annual area covered',
+      valid: filled(d['quantity-area'])
+    })
+  }
+
+  const v = validate(rules)
   if (!v.ok) return res.render('quantity', v)
 
-  const activities = toArray(req.session.data.activities)
-  if (isAmateurOnly(activities)) return res.redirect('/check-answers')
-  res.redirect('/sector')
+  res.redirect(afterQuantity(toArray(d.activities)))
 })
 
 router.post('/sector', (req, res) => {
