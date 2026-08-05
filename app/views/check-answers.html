@@ -56,7 +56,18 @@
 
     {% set pppRows = [] %}
     {% set pppRows = (pppRows.push({ key: { text: "PPP activities at the address" }, value: { html: addressActivityHtml }, actions: { items: [{ href: "/activity-at-address", text: "Change", visuallyHiddenText: "PPP activities at the address" }] } }), pppRows) %}
-    {% set pppRows = (pppRows.push({ key: { text: "Quantity of PPPs used in the last year" }, value: { text: data.quantity + " Kgs" if data.quantity else "" }, actions: { items: [{ href: "/quantity", text: "Change", visuallyHiddenText: "quantity of PPPs" }] } }), pppRows) %}
+    {% if data["quantity-type"] %}
+      {% if data["quantity-type"] == "area" %}
+        {% set quantityKey = "Area covered with PPPs in the last year" %}
+        {% set quantityValue %}{{ data.area }} acres{% endset %}
+        {% set quantityHidden = "area covered with PPPs" %}
+      {% else %}
+        {% set quantityKey = "Quantity of PPPs used in the last year" %}
+        {% set quantityValue %}{{ data.quantity }} litres or kilograms{% endset %}
+        {% set quantityHidden = "quantity of PPPs used" %}
+      {% endif %}
+      {% set pppRows = (pppRows.push({ key: { text: quantityKey }, value: { text: quantityValue | trim }, actions: { items: [{ href: "/quantity", text: "Change", visuallyHiddenText: quantityHidden }] } }), pppRows) %}
+    {% endif %}
     {% if data.sector or data["sector-other"] %}
       {% set pppRows = (pppRows.push({ key: { text: "Main sector of work" }, value: { html: sectorHtml }, actions: { items: [{ href: "/sector", text: "Change", visuallyHiddenText: "main sector of work" }] } }), pppRows) %}
     {% endif %}
