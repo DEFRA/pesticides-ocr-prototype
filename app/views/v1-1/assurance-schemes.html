@@ -1,11 +1,12 @@
 {% extends "layouts/main.html" %}
+{% set basePath = "/v1-1" %}
 
 {% from "govuk/components/checkboxes/macro.njk" import govukCheckboxes %}
 {% from "govuk/components/textarea/macro.njk" import govukTextarea %}
 {% from "govuk/components/button/macro.njk" import govukButton %}
 
 {% set pageName = "Are you a member of any official assurance schemes at this address? (optional)" %}
-{% set backLink = "/sector" %}
+{% set backLink = basePath + "/sector" %}
 
 {% block content %}
 <div class="govuk-grid-row">
@@ -13,7 +14,7 @@
 
     <h1 class="govuk-heading-xl">Are you a member of any official assurance schemes at this address? (optional)</h1>
 
-    <form method="post" action="/assurance-schemes" novalidate>
+    <form method="post" action="{{ basePath }}/assurance-schemes" novalidate>
 
       {{ govukCheckboxes({
         name: "assurance",

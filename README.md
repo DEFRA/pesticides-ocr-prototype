@@ -8,6 +8,7 @@ the [GOV.UK Frontend](https://github.com/alphagov/govuk-frontend).
 - [Requirements](#requirements)
   - [Node.js](#nodejs)
 - [GOV.UK Prototype Kit and GOV.UK Frontend](#govuk-prototype-kit-and-govuk-frontend)
+- [Journey versions](#journey-versions)
 - [Using the refreshed GOV.UK brand](#using-the-refreshed-govuk-brand)
 - [Setting a password](#setting-a-password)
 - [Setting multiple passwords](#setting-multiple-passwords)
@@ -66,6 +67,40 @@ template provides both tools in a wrapper that runs on the Core Delivery Platfor
 > The `pesticides-ocr-prototype` is not a production ready application, it is a tool for prototyping. It is not
 > designed to be used in production or to be resilient, secure or performant, nor should it be. It is designed to be
 > used for prototyping ideas and testing them with users. It's a great tool for prototyping GOV web applications.
+
+## Journey versions
+
+This prototype keeps **each version of the OCR register journey available side by
+side**, so researchers and service designers can review and compare them and we
+build up a historic archive over time. Versions are numbered to match the
+**Figma master flow** (1.1, 1.2, …).
+
+- The landing page (`/`) lists every version — see [app/views/index.html](./app/views/index.html).
+- Each version is self-contained:
+  - **Views:** `app/views/v1-2/…` are served at `/v1-2/…` (e.g. `/v1-2/start`).
+    Every internal link uses a per-view `{% set basePath = "/v1-2" %}` so a
+    version never links out to another version.
+  - **Routes:** `app/routes/v1-2.js` holds that version's POST handlers and
+    branching, sharing the common validation helpers in
+    `app/routes/journey-helpers.js`. All versions are wired up in
+    [app/routes.js](./app/routes.js).
+
+### Adding a version
+
+To add the next Figma version (e.g. `v1-3`):
+
+1. Copy the newest version's view folder and rename it:
+   `cp -r app/views/v1-2 app/views/v1-3`
+2. In the new folder, update the base path in every view (one line each):
+   `perl -pi -e 's{/v1-2}{/v1-3}g' app/views/v1-3/*.html`
+3. Copy the newest version's routes file and repoint it:
+   `cp app/routes/v1-2.js app/routes/v1-3.js` then change `const V = 'v1-2'` to
+   `const V = 'v1-3'` at the top.
+4. Register it in [app/routes.js](./app/routes.js): `require('./routes/v1-3')(router)`
+5. Add a card for it to [app/views/index.html](./app/views/index.html) (version
+   number, deploy date, one-line summary, and a "Start" link to `/v1-3/start`).
+6. Make the actual journey changes in the new folder only — earlier versions stay
+   frozen as the historic record.
 
 ## Using the refreshed GOV.UK brand
 

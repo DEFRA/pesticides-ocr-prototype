@@ -1,4 +1,5 @@
 {% extends "layouts/main.html" %}
+{% set basePath = "/v1-1" %}
 
 {% from "govuk/components/input/macro.njk" import govukInput %}
 {% from "govuk/components/radios/macro.njk" import govukRadios %}
@@ -6,7 +7,7 @@
 {% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
 
 {% set pageName = "Main business address" %}
-{% set backLink = "/business-name" %}
+{% set backLink = basePath + "/business-name" %}
 
 {% block content %}
 <div class="govuk-grid-row">
@@ -17,7 +18,7 @@
     <h1 class="govuk-heading-xl">Main business address</h1>
     <p class="govuk-body">Enter the address that is most relevant to your professional PPP activity. This might be a head office, or where you keep your records. You can add other addresses later if you have them.</p>
 
-    <form method="post" action="/main-address" novalidate>
+    <form method="post" action="{{ basePath }}/main-address" novalidate>
 
       {{ govukInput({
         label: { text: "Address line 1" },

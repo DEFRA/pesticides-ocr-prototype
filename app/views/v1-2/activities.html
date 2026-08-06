@@ -1,11 +1,12 @@
 {% extends "layouts/main.html" %}
+{% set basePath = "/v1-2" %}
 
 {% from "govuk/components/checkboxes/macro.njk" import govukCheckboxes %}
 {% from "govuk/components/button/macro.njk" import govukButton %}
 {% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
 
 {% set pageName = "What are your business's activities with plant protection products (PPPs)?" %}
-{% set backLink = "/" %}
+{% set backLink = basePath + "/start" %}
 
 {% block content %}
 <div class="govuk-grid-row">
@@ -13,7 +14,7 @@
 
     {% if errorList %}{{ govukErrorSummary({ titleText: "There is a problem", errorList: errorList }) }}{% endif %}
 
-    <form method="post" action="/activities" novalidate>
+    <form method="post" action="{{ basePath }}/activities" novalidate>
 
       {{ govukCheckboxes({
         name: "activities",
@@ -67,7 +68,7 @@
     </form>
 
     <p class="govuk-body">
-      <a class="govuk-link" href="/not-eligible">I only use products in my own home or garden</a>
+      <a class="govuk-link" href="{{ basePath }}/not-eligible">I only use products in my own home or garden</a>
     </p>
 
   </div>
