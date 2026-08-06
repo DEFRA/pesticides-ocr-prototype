@@ -1,11 +1,12 @@
 {% extends "layouts/main.html" %}
+{% set basePath = "/v1-2" %}
 
 {% from "govuk/components/radios/macro.njk" import govukRadios %}
 {% from "govuk/components/button/macro.njk" import govukButton %}
 {% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
 
 {% set pageName = "Do you need to add any additional business addresses?" %}
-{% set backLink = "/assurance-schemes" %}
+{% set backLink = basePath + "/assurance-schemes" %}
 
 {% block content %}
 <div class="govuk-grid-row">
@@ -13,7 +14,7 @@
 
     {% if errorList %}{{ govukErrorSummary({ titleText: "There is a problem", errorList: errorList }) }}{% endif %}
 
-    <form method="post" action="/additional-addresses-question" novalidate>
+    <form method="post" action="{{ basePath }}/additional-addresses-question" novalidate>
 
       {{ govukRadios({
         name: "add-additional",

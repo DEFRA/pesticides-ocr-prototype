@@ -1,11 +1,12 @@
 {% extends "layouts/main.html" %}
+{% set basePath = "/v1-1" %}
 
 {% from "govuk/components/input/macro.njk" import govukInput %}
 {% from "govuk/components/button/macro.njk" import govukButton %}
 {% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
 
 {% set pageName = "Contact details" %}
-{% set backLink = "/additional-address" %}
+{% set backLink = basePath + "/additional-address" %}
 
 {% block content %}
 <div class="govuk-grid-row">
@@ -16,7 +17,7 @@
     <h1 class="govuk-heading-xl">Contact details</h1>
     <p class="govuk-body">This should be the contact details of someone with a good knowledge of your professional PPP activity.</p>
 
-    <form method="post" action="/additional-address-contact" novalidate>
+    <form method="post" action="{{ basePath }}/additional-address-contact" novalidate>
 
       {{ govukInput({
         label: { text: "Name" },
