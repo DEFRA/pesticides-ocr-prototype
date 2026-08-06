@@ -19,6 +19,10 @@ const P = '/' + V // URL prefix for redirects
 const view = (name) => V + '/' + name // view path for render (app/views/v1-2/…)
 
 module.exports = (router) => {
+  // Bare version root → the version's start page. Without this, /v1-2 has no
+  // matching view and hits the Prototype Kit's (broken) built-in 404 page.
+  router.get(P, (req, res) => res.redirect(P + '/start'))
+
   // Where the quantity page leads — also used when the quantity page is skipped:
   // amateur-only journeys go straight to check-answers, everyone else to sector.
   const afterQuantity = (activities) =>

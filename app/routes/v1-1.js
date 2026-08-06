@@ -18,6 +18,10 @@ const P = '/' + V // URL prefix for redirects
 const view = (name) => V + '/' + name // view path for render (app/views/v1-1/…)
 
 module.exports = (router) => {
+  // Bare version root → the version's start page. Without this, /v1-1 has no
+  // matching view and hits the Prototype Kit's (broken) built-in 404 page.
+  router.get(P, (req, res) => res.redirect(P + '/start'))
+
   // --- Activities: validate, then decide whether to ask "main customer" ---
   router.post(P + '/activities', (req, res) => {
     const activities = toArray(req.session.data.activities)
