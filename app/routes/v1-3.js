@@ -15,6 +15,7 @@ const {
   filled,
   validate,
   isAmateurOnly,
+  consumeReturnTo,
   clearAdditionalAddressFields
 } = require('./journey-helpers')
 
@@ -26,6 +27,16 @@ module.exports = (router) => {
   // Bare version root → the version's start page. Without this, /v1-2 has no
   // matching view and hits the Prototype Kit's (broken) built-in 404 page.
   router.get(P, (req, res) => res.redirect(P + '/start'))
+
+  // Capture a CYA "Change" link's ?returnTo=<cya> into session (on the GET of the
+  // page being edited), so that page's POST can return to the CYA. Scoped to this
+  // version's paths. See consumeReturnTo in journey-helpers.
+  router.use((req, res, next) => {
+    if (req.path.startsWith(P) && req.query.returnTo && req.session.data) {
+      req.session.data.returnTo = req.query.returnTo
+    }
+    next()
+  })
 
   // Where the quantity page leads — also used when the quantity page is skipped:
   // amateur-only journeys go straight to check-answers, everyone else to sector.
@@ -49,6 +60,8 @@ module.exports = (router) => {
       }
     ])
     if (!v.ok) return res.render(view('activities'), v)
+    const back = consumeReturnTo(req)
+    if (back) return res.redirect(P + '/' + back)
     res.redirect(P + '/business-name')
   })
 
@@ -74,6 +87,9 @@ module.exports = (router) => {
       }
     ])
     if (!v.ok) return res.render(view('business-name'), v)
+
+    const back = consumeReturnTo(req)
+    if (back) return res.redirect(P + '/' + back)
 
     // Special case (Figma 1.3): if selling is the ONLY activity, skip the common
     // address/contact pages and go straight to the Sell section. Everyone else
@@ -126,6 +142,8 @@ module.exports = (router) => {
       }
     ])
     if (!v.ok) return res.render(view('main-address'), v)
+    const back = consumeReturnTo(req)
+    if (back) return res.redirect(P + '/' + back)
     res.redirect(P + '/contact-details')
   })
 
@@ -140,6 +158,8 @@ module.exports = (router) => {
       }
     ])
     if (!v.ok) return res.render(view('address-international'), v)
+    const back = consumeReturnTo(req)
+    if (back) return res.redirect(P + '/' + back)
     res.redirect(P + '/contact-details')
   })
 
@@ -163,7 +183,12 @@ module.exports = (router) => {
       }
     ])
     if (!v.ok) return res.render(view('contact-details'), v)
-    res.redirect(P + '/activity-at-address')
+    const back = consumeReturnTo(req)
+    if (back) return res.redirect(P + '/' + back)
+    // TODO: → the first selected activity's flow (ordered traversal) once the
+    // activity-flow screens land. For now goes straight to the CYA so the common
+    // route is walkable/testable end-to-end.
+    res.redirect(P + '/check-answers')
   })
 
   router.post(P + '/activity-at-address', (req, res) => {
