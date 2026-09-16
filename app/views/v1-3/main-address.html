@@ -6,8 +6,8 @@
 {% from "govuk/components/button/macro.njk" import govukButton %}
 {% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
 
-{% set pageName = "Main business address" %}
-{% set backLink = basePath + "/business-name" %}
+{% set pageName = "Main site address" %}
+{% set backLink = basePath + "/address-lookup" %}
 
 {% block content %}
 <div class="govuk-grid-row">
@@ -15,8 +15,8 @@
 
     {% if errorList %}{{ govukErrorSummary({ titleText: "There is a problem", errorList: errorList }) }}{% endif %}
 
-    <h1 class="govuk-heading-xl">Main business address</h1>
-    <p class="govuk-body">Enter the address that is most relevant to your professional PPP activity. This might be a head office, or where you keep your records. You can add other addresses later if you have them.</p>
+    <h1 class="govuk-heading-xl">Main site address</h1>
+    <p class="govuk-body">This is the address most relevant to the PPP activities you are responsible for.</p>
 
     <form method="post" action="{{ basePath }}/main-address" novalidate>
 
@@ -73,6 +73,11 @@
       {{ govukButton({ text: "Continue" }) }}
 
     </form>
+
+    {# TODO: destination for out-of-GB address (likely a "not in scope" page) — pending #}
+    <p class="govuk-body">
+      <a class="govuk-link" href="#">Our main business address is outside of Great Britain</a>
+    </p>
 
   </div>
 </div>

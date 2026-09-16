@@ -83,6 +83,22 @@ module.exports = (router) => {
     // TODO: /sell = Sell-section entry, /main-address = common address lookup —
     // both wired to their real 1.3 pages as those screens land.
     if (sellingOnly) return res.redirect(P + '/sell')
+    res.redirect(P + '/address-lookup')
+  })
+
+  // Business address lookup (Figma 1.3). "Enter an address manually" is a direct
+  // link to /main-address. "Find an address" would lead to a results/select page
+  // — that screen is pending, so for now it proceeds to the manual page.
+  router.post(P + '/address-lookup', (req, res) => {
+    const v = validate([
+      {
+        field: 'lookup-postcode',
+        message: 'Enter a postcode',
+        valid: filled(req.session.data['lookup-postcode'])
+      }
+    ])
+    if (!v.ok) return res.render(view('address-lookup'), v)
+    // TODO: real "select an address" results page for the Find path (pending).
     res.redirect(P + '/main-address')
   })
 
