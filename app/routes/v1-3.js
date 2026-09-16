@@ -69,11 +69,20 @@ module.exports = (router) => {
     const v = validate([
       {
         field: 'business-name',
-        message: 'Enter your business or company name',
+        message: 'Enter your business or organisation name',
         valid: filled(req.session.data['business-name'])
       }
     ])
     if (!v.ok) return res.render(view('business-name'), v)
+
+    // Special case (Figma 1.3): if selling is the ONLY activity, skip the common
+    // address/contact pages and go straight to the Sell section. Everyone else
+    // follows the common route (address lookup next).
+    const activities = toArray(req.session.data.activities)
+    const sellingOnly = activities.length === 1 && activities[0] === 'selling'
+    // TODO: /sell = Sell-section entry, /main-address = common address lookup —
+    // both wired to their real 1.3 pages as those screens land.
+    if (sellingOnly) return res.redirect(P + '/sell')
     res.redirect(P + '/main-address')
   })
 
