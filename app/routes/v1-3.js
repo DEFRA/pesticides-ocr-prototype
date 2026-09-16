@@ -185,10 +185,87 @@ module.exports = (router) => {
     if (!v.ok) return res.render(view('contact-details'), v)
     const back = consumeReturnTo(req)
     if (back) return res.redirect(P + '/' + back)
-    // TODO: → the first selected activity's flow (ordered traversal) once the
-    // activity-flow screens land. For now goes straight to the CYA so the common
-    // route is walkable/testable end-to-end.
-    res.redirect(P + '/check-answers')
+    // TODO: → the FIRST selected activity's flow via the ordered-traversal
+    // dispatcher (built once all 7 journeys exist). For now → the Using journey
+    // entry so it's walkable while we build it.
+    res.redirect(P + '/who-applies')
+  })
+
+  // --- Using PPPs journey (Figma 1.3) -------------------------------------
+
+  // Who applies PPPs? Branch: we-apply → sector; another org → 3rd-party details.
+  router.post(P + '/who-applies', (req, res) => {
+    const answer = req.session.data['who-applies']
+    const v = validate([
+      {
+        field: 'who-applies',
+        message: 'Select who applies PPPs for your organisation',
+        valid: filled(answer)
+      }
+    ])
+    if (!v.ok) return res.render(view('who-applies'), v)
+    const back = consumeReturnTo(req)
+    if (back) return res.redirect(P + '/' + back)
+    if (answer === 'Another organisation applies PPPs on our behalf') {
+      return res.redirect(P + '/third-party')
+    }
+    res.redirect(P + '/sector')
+  })
+
+  // Third-party applicator details (reached when another org applies) → sector.
+  router.post(P + '/third-party', (req, res) => {
+    const d = req.session.data
+    const v = validate([
+      {
+        field: 'third-party-name',
+        message: 'Enter the business or company name',
+        valid: filled(d['third-party-name'])
+      },
+      {
+        field: 'third-party-line-1',
+        message: 'Enter address line 1',
+        valid: filled(d['third-party-line-1'])
+      },
+      {
+        field: 'third-party-town',
+        message: 'Enter a town or city',
+        valid: filled(d['third-party-town'])
+      },
+      {
+        field: 'third-party-postcode',
+        message: 'Enter a postcode',
+        valid: filled(d['third-party-postcode'])
+      },
+      {
+        field: 'third-party-country',
+        message: 'Select a country',
+        valid: filled(d['third-party-country'])
+      }
+    ])
+    if (!v.ok) return res.render(view('third-party'), v)
+    const back = consumeReturnTo(req)
+    if (back) return res.redirect(P + '/' + back)
+    res.redirect(P + '/sector')
+  })
+
+  // Which sector(s)? Assurance schemes only apply to agriculture / horticulture,
+  // so branch past them otherwise.
+  router.post(P + '/sector', (req, res) => {
+    const d = req.session.data
+    const sectors = toArray(d.sector)
+    const v = validate([
+      {
+        field: 'sector',
+        message: 'Select a sector, or describe your work in the ‘Other’ box',
+        valid: sectors.length > 0 || filled(d['sector-other'])
+      }
+    ])
+    if (!v.ok) return res.render(view('sector'), v)
+    const back = consumeReturnTo(req)
+    if (back) return res.redirect(P + '/' + back)
+    const showAssurance =
+      sectors.includes('Agriculture') || sectors.includes('Horticulture')
+    res.redirect(P + (showAssurance ? '/assurance-schemes' : '/store-applied'))
   })
 
   router.post(P + '/activity-at-address', (req, res) => {
@@ -240,20 +317,6 @@ module.exports = (router) => {
     if (!v.ok) return res.render(view('quantity'), v)
 
     res.redirect(afterQuantity(toArray(d.activities)))
-  })
-
-  router.post(P + '/sector', (req, res) => {
-    const d = req.session.data
-    const v = validate([
-      {
-        field: 'sector',
-        message:
-          'Select the main sector of your work, or describe it in the ‘Other’ box',
-        valid: toArray(d.sector).length > 0 || filled(d['sector-other'])
-      }
-    ])
-    if (!v.ok) return res.render(view('sector'), v)
-    res.redirect(P + '/assurance-schemes')
   })
 
   // Assurance schemes is optional — no validation
