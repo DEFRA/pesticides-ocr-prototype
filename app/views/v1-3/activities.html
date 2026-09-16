@@ -5,7 +5,7 @@
 {% from "govuk/components/button/macro.njk" import govukButton %}
 {% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
 
-{% set pageName = "What are your business's activities with plant protection products (PPPs)?" %}
+{% set pageName = "Which activities does your organisation carry out?" %}
 {% set backLink = basePath + "/start" %}
 
 {% block content %}
@@ -21,44 +21,53 @@
         errorMessage: { text: errors["activities"] } if errors["activities"],
         fieldset: {
           legend: {
-            text: "What are your business’s activities with plant protection products (PPPs)?",
+            text: "Which activities does your organisation carry out?",
             isPageHeading: true,
             classes: "govuk-fieldset__legend--l"
           }
         },
         hint: {
-          text: "Select all that apply."
+          html: "These activities must be carried out in Great Britain (England, Scotland or Wales).<br><br>Select all that apply."
         },
         items: [
           {
-            value: "manufacture",
-            text: "Manufacture, process or import",
-            hint: { text: "This includes making, mixing, or bringing professional or amateur PPPs into Great Britain." },
-            checked: checked("activities", "manufacture")
+            value: "using",
+            text: "Using PPPs as part of your work",
+            checked: checked("activities", "using")
           },
           {
-            value: "place-on-market",
-            text: "Place on the market or distribute",
-            hint: { text: "This includes wholesaling, supplying, or moving PPPs down the supply chain." },
-            checked: checked("activities", "place-on-market")
+            value: "manufacturing",
+            text: "Manufacturing PPPs",
+            checked: checked("activities", "manufacturing")
           },
           {
-            value: "sell-professional",
-            text: "Sell professional PPPs",
-            hint: { text: "Selling commercial-grade chemicals, pesticides, or adjuvants to businesses or certified professional users." },
-            checked: checked("activities", "sell-professional")
+            value: "importing",
+            text: "Importing PPPs",
+            checked: checked("activities", "importing")
           },
           {
-            value: "sell-amateur",
-            text: "Sell amateur PPPs",
-            hint: { text: "Selling home and garden weedkillers, insecticides, or slug pellets to the general public (for example, in a retail shop or garden center)." },
-            checked: checked("activities", "sell-amateur")
+            value: "processing",
+            text: "Processing PPPs",
+            checked: checked("activities", "processing")
           },
           {
-            value: "use-professional",
-            text: "Use professional PPPs as part of work",
-            hint: { text: "Applying or storing commercial-grade pesticides, weedkillers, or adjuvants on land, farms, or commercial premises (either yourself or by hiring a contractor)." },
-            checked: checked("activities", "use-professional")
+            value: "selling",
+            text: "Selling PPPs",
+            checked: checked("activities", "selling")
+          },
+          {
+            value: "distributing",
+            text: "Distributing PPPs",
+            checked: checked("activities", "distributing")
+          },
+          {
+            divider: "or"
+          },
+          {
+            value: "storing-only",
+            text: "Only storing PPPs for other businesses",
+            behaviour: "exclusive",
+            checked: checked("activities", "storing-only")
           }
         ]
       }) }}
@@ -68,7 +77,7 @@
     </form>
 
     <p class="govuk-body">
-      <a class="govuk-link" href="{{ basePath }}/not-eligible">I only use products in my own home or garden</a>
+      <a class="govuk-link" href="{{ basePath }}/not-eligible">I only use plant protection products (PPPs) in my own home or garden</a>
     </p>
 
   </div>

@@ -1,22 +1,26 @@
 //
-// OCR register journey — version 1.2 (Figma master flow 1.2).
-// Mounted under /v1-2. What changed from 1.1:
-//  - the quantity page is only shown when the user USES PPPs/adjuvants at the
-//    address (storing/record-keeping alone skips it);
-//  - quantity is captured as either an amount or an area (radio + revealed input).
+// OCR register journey — version 1.3 (Figma master flow 1.3).
+// Mounted under /v1-3. What's changing from 1.2 (build in progress):
+//  - business-activities offers 7 options — 6 multi-select (using, manufacturing,
+//    importing, processing, selling, distributing) + 1 exclusive ("only storing");
+//  - each selected activity has its own flow, traversed in the order selected,
+//    then a combined check-answers;
+//  - common route: activities → business name → address → contact → {activity
+//    flows}; special case: selling only → business name → sell flow.
+// NOTE: the per-activity flows are being added as the Figma 1.3 screens land; the
+// tail below is still the 1.2 wiring and will be reworked per activity.
 //
 const {
   toArray,
   filled,
   validate,
-  SELLER_ACTIVITIES,
   isAmateurOnly,
   clearAdditionalAddressFields
 } = require('./journey-helpers')
 
 const V = 'v1-3'
 const P = '/' + V // URL prefix for redirects
-const view = (name) => V + '/' + name // view path for render (app/views/v1-2/…)
+const view = (name) => V + '/' + name // view path for render (app/views/v1-3/…)
 
 module.exports = (router) => {
   // Bare version root → the version's start page. Without this, /v1-2 has no
@@ -28,24 +32,23 @@ module.exports = (router) => {
   const afterQuantity = (activities) =>
     isAmateurOnly(activities) ? P + '/check-answers' : P + '/sector'
 
-  // --- Activities: validate, then decide whether to ask "main customer" ---
+  // --- Business activities (v1.3) ---
+  // Each selected activity has its own flow, traversed in the order selected,
+  // then a combined check-answers. The selection order is the checkbox DOM order
+  // (page top-to-bottom); if UR needs literal click order we'd capture it client
+  // side. Both the common route and the selling-only special case start at
+  // business name, so route there; the per-activity traversal after that is wired
+  // as the Figma 1.3 flows land.
   router.post(P + '/activities', (req, res) => {
     const activities = toArray(req.session.data.activities)
     const v = validate([
       {
         field: 'activities',
-        message:
-          'Select what your business does with plant protection products',
+        message: 'Select which activities your organisation carries out',
         valid: activities.length > 0
       }
     ])
     if (!v.ok) return res.render(view('activities'), v)
-
-    const needsMainCustomer = activities.some((a) =>
-      SELLER_ACTIVITIES.includes(a)
-    )
-    if (needsMainCustomer) return res.redirect(P + '/main-customer')
-    // sell-amateur / use-professional → skip main customer
     res.redirect(P + '/business-name')
   })
 
