@@ -130,6 +130,20 @@ module.exports = (router) => {
     res.redirect(P + '/contact-details')
   })
 
+  // Main business address outside Great Britain (free-text) — reached from the
+  // "outside of Great Britain" link on the manual address page.
+  router.post(P + '/address-international', (req, res) => {
+    const v = validate([
+      {
+        field: 'international-address',
+        message: 'Enter your business address',
+        valid: filled(req.session.data['international-address'])
+      }
+    ])
+    if (!v.ok) return res.render(view('address-international'), v)
+    res.redirect(P + '/contact-details')
+  })
+
   router.post(P + '/contact-details', (req, res) => {
     const d = req.session.data
     const v = validate([
