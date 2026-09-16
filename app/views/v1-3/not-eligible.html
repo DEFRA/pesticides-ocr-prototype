@@ -22,10 +22,11 @@
       <li><a class="govuk-link" href="#">Search the database of authorised amateur garden products</a></li>
     </ul>
 
-    {# TODO: confirm where Continue leads (feedback page / gov.uk / restart). Placeholder for now. #}
+    {# Continue leads to the same next page (page 3) as the business-activities
+       Continue. Kept in sync with the /activities route target. #}
     {{ govukButton({
       text: "Continue",
-      href: "#"
+      href: basePath + "/business-name"
     }) }}
 
   </div>
