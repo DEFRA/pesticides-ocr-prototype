@@ -19,6 +19,7 @@ const router = govukPrototypeKit.requests.setupRouter()
 // Register each version's journey routes.
 require('./routes/v1-1')(router)
 require('./routes/v1-2')(router)
+require('./routes/v1-3')(router)
 
 // Safety net for stray/old URLs.
 //

@@ -1,0 +1,79 @@
+{% extends "layouts/main.html" %}
+{% set basePath = "/v1-3" %}
+
+{% from "govuk/components/input/macro.njk" import govukInput %}
+{% from "govuk/components/radios/macro.njk" import govukRadios %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
+
+{% set pageName = "What quantity of plant protection products (PPPs) or adjuvants do you use at this address in a typical year?" %}
+{% set backLink = basePath + "/activity-at-address" %}
+
+{% block content %}
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+
+    {% if errorList %}{{ govukErrorSummary({ titleText: "There is a problem", errorList: errorList }) }}{% endif %}
+
+    {% set amountRevealHtml %}
+      {{ govukInput({
+        label: { text: "Estimated annual quantity" },
+        id: "quantity",
+        name: "quantity",
+        classes: "govuk-input--width-10",
+        inputmode: "numeric",
+        spellcheck: false,
+        errorMessage: { text: errors["quantity"] } if errors["quantity"],
+        value: data["quantity"]
+      }) }}
+    {% endset %}
+
+    {% set areaRevealHtml %}
+      {{ govukInput({
+        label: { text: "Estimated annual area covered" },
+        id: "area",
+        name: "area",
+        classes: "govuk-input--width-10",
+        inputmode: "numeric",
+        spellcheck: false,
+        errorMessage: { text: errors["area"] } if errors["area"],
+        value: data["area"]
+      }) }}
+    {% endset %}
+
+    <form method="post" action="{{ basePath }}/quantity" novalidate>
+
+      {{ govukRadios({
+        name: "quantity-type",
+        fieldset: {
+          legend: {
+            text: pageName,
+            isPageHeading: true,
+            classes: "govuk-fieldset__legend--xl"
+          }
+        },
+        hint: { text: "Give an estimate of the total amount of undiluted product you use. You can enter this as the amount in litres or kilograms, or by the area covered." },
+        errorMessage: { text: errors["quantity-type"] } if errors["quantity-type"],
+        items: [
+          {
+            value: "amount",
+            text: "Amount in litres or kilograms",
+            checked: checked("quantity-type", "amount"),
+            conditional: { html: amountRevealHtml }
+          },
+          {
+            value: "area",
+            text: "Area covered in acres",
+            checked: checked("quantity-type", "area"),
+            conditional: { html: areaRevealHtml }
+          }
+        ]
+      }) }}
+
+      {{ govukButton({ text: "Continue" }) }}
+
+    </form>
+
+  </div>
+</div>
+{% endblock %}
