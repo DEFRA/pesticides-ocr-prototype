@@ -98,8 +98,7 @@ module.exports = (router) => {
       }
     ])
     if (!v.ok) return res.render(view('address-lookup'), v)
-    // TODO: real "select an address" results page for the Find path (pending).
-    res.redirect(P + '/main-address')
+    res.redirect(P + '/address-lookup-result')
   })
 
   router.post(P + '/main-address', (req, res) => {
