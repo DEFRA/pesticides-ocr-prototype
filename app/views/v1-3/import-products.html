@@ -1,0 +1,29 @@
+{% extends "layouts/main.html" %} {% set basePath = "/v1-3" %} {% from
+"govuk/components/radios/macro.njk" import govukRadios %} {% from
+"govuk/components/button/macro.njk" import govukButton %} {% from
+"govuk/components/error-summary/macro.njk" import govukErrorSummary %} {% set
+pageName = "What products do you import into England, Scotland or Wales?" %} {%
+set backLink = basePath + "/contact-details" %} {% block content %}
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+    {% if errorList %}{{ govukErrorSummary({ titleText: "There is a problem",
+    errorList: errorList }) }}{% endif %}
+
+    <form method="post" action="{{ basePath }}/import-products" novalidate>
+      {{ govukRadios({ name: "import-products", errorMessage: { text:
+      errors["import-products"] } if errors["import-products"], fieldset: {
+      legend: { text: "What products do you import into England, Scotland or
+      Wales?", isPageHeading: true, classes: "govuk-fieldset__legend--l" } },
+      hint: { text: "Select an option" }, items: [ { value: "Plant protection
+      products (PPPs) only", text: "Plant protection products (PPPs) only",
+      checked: checked("import-products", "Plant protection products (PPPs)
+      only") }, { value: "Ingredients or adjuvants only", text: "Ingredients or
+      adjuvants only", checked: checked("import-products", "Ingredients or
+      adjuvants only") }, { value: "Both PPPs and ingredients or adjuvants",
+      text: "Both PPPs and ingredients or adjuvants", checked:
+      checked("import-products", "Both PPPs and ingredients or adjuvants") } ]
+      }) }} {{ govukButton({ text: "Continue" }) }}
+    </form>
+  </div>
+</div>
+{% endblock %}

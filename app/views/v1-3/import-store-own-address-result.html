@@ -1,0 +1,40 @@
+{% extends "layouts/main.html" %} {% set basePath = "/v1-3" %} {% from
+"govuk/components/button/macro.njk" import govukButton %} {% set pageName =
+"What is the location where you store PPPs?" %} {% set backLink = basePath +
+"/import-store-own-address-search" %} {% block content %}
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+    <h1 class="govuk-heading-xl">What is the location where you store PPPs?</h1>
+
+    <p class="govuk-body">
+      1 address found for
+      <strong>{{ data["import-store-postcode"] or "AA3 1AB" }}</strong> and
+      <strong>{{ data["import-store-building"] or "Pesticides House" }}</strong
+      >.
+      <a
+        class="govuk-link"
+        href="{{ basePath }}/import-store-own-address-search"
+        >Search again</a
+      >
+    </p>
+
+    <div class="govuk-inset-text">
+      {{ data["import-store-building"] or "Pesticides House" }}, Chemical close,
+      City, {{ data["import-store-postcode"] or "AA3 1AB" }}
+    </div>
+
+    <div class="govuk-button-group">
+      {{ govukButton({ text: "Use this address", href: basePath +
+      "/import-store-sites" }) }}
+      <span class="govuk-body"
+        >or
+        <a
+          class="govuk-link"
+          href="{{ basePath }}/import-store-own-address-manual"
+          >enter an address manually</a
+        ></span
+      >
+    </div>
+  </div>
+</div>
+{% endblock %}

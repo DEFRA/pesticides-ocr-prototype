@@ -47,7 +47,8 @@ const sectorChainNext = (afterPage, sectors) => {
 // skipped over. selling-only is handled separately (business-name → /sell).
 const activityEntry = {
   using: 'who-applies',
-  manufacturing: 'manufacture-products'
+  manufacturing: 'manufacture-products',
+  importing: 'import-products'
 }
 const firstActivityEntry = (activities) => {
   for (const a of activities) {
@@ -584,6 +585,174 @@ module.exports = (router) => {
     res.redirect(P + '/check-answers')
   })
 
+  // --- Importing PPPs journey (Figma 1.3) ---------------------------------
+  // products → do you store? → (storage sub-flow) → quantity → check-answers.
+
+  router.post(P + '/import-products', (req, res) => {
+    const v = validate([
+      {
+        field: 'import-products',
+        message: 'Select what products you import',
+        valid: filled(req.session.data['import-products'])
+      }
+    ])
+    if (!v.ok) return res.render(view('import-products'), v)
+    const back = consumeReturnTo(req)
+    if (back) return res.redirect(P + '/' + back)
+    res.redirect(P + '/import-storing')
+  })
+
+  // Do you store products you import? Own sites → where; 3rd party → contact;
+  // don't store → quantity.
+  router.post(P + '/import-storing', (req, res) => {
+    const answer = req.session.data['import-storing']
+    const v = validate([
+      {
+        field: 'import-storing',
+        message: 'Select whether you store products you import',
+        valid: filled(answer)
+      }
+    ])
+    if (!v.ok) return res.render(view('import-storing'), v)
+    const back = consumeReturnTo(req)
+    if (back) return res.redirect(P + '/' + back)
+    if (answer === 'Yes, at sites we own') {
+      return res.redirect(P + '/import-storing-where')
+    }
+    if (answer === 'Yes, 3rd party stores') {
+      return res.redirect(P + '/import-store-3rd-party-contact')
+    }
+    res.redirect(P + '/import-quantity')
+  })
+
+  // Third-party storage contact (import) → how many sites.
+  router.post(P + '/import-store-3rd-party-contact', (req, res) => {
+    const d = req.session.data
+    const v = validate([
+      {
+        field: 'import-store-3p-name',
+        message: 'Enter a contact name',
+        valid: filled(d['import-store-3p-name'])
+      },
+      {
+        field: 'import-store-3p-telephone',
+        message: 'Enter a telephone number',
+        valid: filled(d['import-store-3p-telephone'])
+      },
+      {
+        field: 'import-store-3p-email',
+        message: 'Enter an email address',
+        valid: filled(d['import-store-3p-email'])
+      }
+    ])
+    if (!v.ok) return res.render(view('import-store-3rd-party-contact'), v)
+    const back = consumeReturnTo(req)
+    if (back) return res.redirect(P + '/' + back)
+    res.redirect(P + '/import-store-sites')
+  })
+
+  // Where do you store? Main address → how many sites; different location →
+  // storage address lookup.
+  router.post(P + '/import-storing-where', (req, res) => {
+    const answer = req.session.data['import-storing-where']
+    const v = validate([
+      {
+        field: 'import-storing-where',
+        message: 'Select where you store products you import',
+        valid: filled(answer)
+      }
+    ])
+    if (!v.ok) return res.render(view('import-storing-where'), v)
+    const back = consumeReturnTo(req)
+    if (back) return res.redirect(P + '/' + back)
+    if (answer === 'Main business address') {
+      return res.redirect(P + '/import-store-sites')
+    }
+    res.redirect(P + '/import-store-own-address-lookup')
+  })
+
+  // How many storage sites (import) → quantity.
+  router.post(P + '/import-store-sites', (req, res) => {
+    const v = validate([
+      {
+        field: 'import-store-sites',
+        message: 'Select the number of sites you are responsible for',
+        valid: filled(req.session.data['import-store-sites'])
+      }
+    ])
+    if (!v.ok) return res.render(view('import-store-sites'), v)
+    const back = consumeReturnTo(req)
+    if (back) return res.redirect(P + '/' + back)
+    res.redirect(P + '/import-quantity')
+  })
+
+  // Storage location lookup intro (own, different location): "Find an address" →
+  // the postcode search page; "enter manually" links straight to the manual page.
+  router.post(P + '/import-store-own-address-lookup', (req, res) =>
+    res.redirect(P + '/import-store-own-address-search')
+  )
+
+  // Storage location postcode search → results.
+  router.post(P + '/import-store-own-address-search', (req, res) => {
+    const v = validate([
+      {
+        field: 'import-store-postcode',
+        message: 'Enter a postcode',
+        valid: filled(req.session.data['import-store-postcode'])
+      }
+    ])
+    if (!v.ok) return res.render(view('import-store-own-address-search'), v)
+    const back = consumeReturnTo(req)
+    if (back) return res.redirect(P + '/' + back)
+    res.redirect(P + '/import-store-own-address-result')
+  })
+
+  // Storage location entered manually → how many sites.
+  router.post(P + '/import-store-own-address-manual', (req, res) => {
+    const d = req.session.data
+    const v = validate([
+      {
+        field: 'import-store-line-1',
+        message: 'Enter address line 1',
+        valid: filled(d['import-store-line-1'])
+      },
+      {
+        field: 'import-store-town',
+        message: 'Enter a town or city',
+        valid: filled(d['import-store-town'])
+      },
+      {
+        field: 'import-store-postcode',
+        message: 'Enter a postcode',
+        valid: filled(d['import-store-postcode'])
+      },
+      {
+        field: 'import-store-country',
+        message: 'Select a country',
+        valid: filled(d['import-store-country'])
+      }
+    ])
+    if (!v.ok) return res.render(view('import-store-own-address-manual'), v)
+    const back = consumeReturnTo(req)
+    if (back) return res.redirect(P + '/' + back)
+    res.redirect(P + '/import-store-sites')
+  })
+
+  // Quantity (import, free-text) → the combined check-answers.
+  router.post(P + '/import-quantity', (req, res) => {
+    const v = validate([
+      {
+        field: 'import-quantity',
+        message: 'Enter the estimated annual quantity',
+        valid: filled(req.session.data['import-quantity'])
+      }
+    ])
+    if (!v.ok) return res.render(view('import-quantity'), v)
+    const back = consumeReturnTo(req)
+    if (back) return res.redirect(P + '/' + back)
+    res.redirect(P + '/check-answers')
+  })
+
   // --- Additional addresses branch ---
   router.post(P + '/additional-addresses-question', (req, res) => {
     const v = validate([
@@ -712,6 +881,41 @@ module.exports = (router) => {
       return res.redirect(P + '/additional-addresses-question')
     }
     res.redirect(P + '/additional-addresses')
+  })
+
+  // Check-answers is rendered here (not auto-rendered) so all option-string
+  // comparisons live in JS. The formatter reflows nunjucks {% set %} blocks like
+  // prose and can insert newlines inside string literals, which silently breaks
+  // in-template string comparisons; computing the flags here avoids that.
+  const NO_STORE = "No, we don't store PPPs"
+  router.get(P + '/check-answers', (req, res) => {
+    const d = req.session.data || {}
+    const sectors = toArray(d.sector)
+    res.render(view('check-answers'), {
+      // Using PPPs section
+      usingAnotherOrg:
+        d['who-applies'] === 'Another organisation applies PPPs on our behalf',
+      usingAssurance:
+        sectors.includes('Agriculture') || sectors.includes('Horticulture'),
+      usingStoreOwnSites: d['store-applied'] === 'Yes, at sites we own',
+      usingStoreThirdParty:
+        d['store-applied'] === 'Yes, a third party stores them for us',
+      usingStoreOwnDifferent:
+        d['store-applied'] === 'Yes, at sites we own' &&
+        d['storing-where'] ===
+          'A different location to the main business address',
+      usingShowStorageSites:
+        !!d['store-applied'] && d['store-applied'] !== NO_STORE,
+      // Importing PPPs section
+      importStoreOwnSites: d['import-storing'] === 'Yes, at sites we own',
+      importStoreThirdParty: d['import-storing'] === 'Yes, 3rd party stores',
+      importStoreOwnDifferent:
+        d['import-storing'] === 'Yes, at sites we own' &&
+        d['import-storing-where'] ===
+          'A different location to the main business address',
+      importShowStorageSites:
+        !!d['import-storing'] && d['import-storing'] !== NO_STORE
+    })
   })
 
   // --- Finish ---

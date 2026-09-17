@@ -1,0 +1,57 @@
+{% extends "layouts/main.html" %} {% set basePath = "/v1-3" %} {% from
+"govuk/components/input/macro.njk" import govukInput %} {% from
+"govuk/components/radios/macro.njk" import govukRadios %} {% from
+"govuk/components/button/macro.njk" import govukButton %} {% from
+"govuk/components/error-summary/macro.njk" import govukErrorSummary %} {% set
+pageName = "What is the location where you store PPPs?" %} {% set backLink =
+basePath + "/import-store-own-address-lookup" %} {% block content %}
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+    {% if errorList %}{{ govukErrorSummary({ titleText: "There is a problem",
+    errorList: errorList }) }}{% endif %}
+
+    <h1 class="govuk-heading-xl">What is the location where you store PPPs?</h1>
+    <p class="govuk-body">
+      This is the address most relevant to the PPP you store.
+    </p>
+
+    <form
+      method="post"
+      action="{{ basePath }}/import-store-own-address-manual"
+      novalidate
+    >
+      {{ govukInput({ label: { text: "Address line 1" }, id:
+      "import-store-line-1", name: "import-store-line-1", autocomplete:
+      "address-line1", errorMessage: { text: errors["import-store-line-1"] } if
+      errors["import-store-line-1"], value: data["import-store-line-1"] }) }} {{
+      govukInput({ label: { text: "Address line 2 (optional)" }, id:
+      "import-store-line-2", name: "import-store-line-2", autocomplete:
+      "address-line2", value: data["import-store-line-2"] }) }} {{ govukInput({
+      label: { text: "Town or city" }, id: "import-store-town", name:
+      "import-store-town", classes: "govuk-!-width-two-thirds", autocomplete:
+      "address-level2", errorMessage: { text: errors["import-store-town"] } if
+      errors["import-store-town"], value: data["import-store-town"] }) }} {{
+      govukInput({ label: { text: "Postcode" }, id: "import-store-postcode",
+      name: "import-store-postcode", classes: "govuk-input--width-10",
+      autocomplete: "postal-code", errorMessage: { text:
+      errors["import-store-postcode"] } if errors["import-store-postcode"],
+      value: data["import-store-postcode"] }) }} {{ govukRadios({ name:
+      "import-store-country", errorMessage: { text:
+      errors["import-store-country"] } if errors["import-store-country"],
+      fieldset: { legend: { text: "Country" } }, items: [ { value: "England",
+      text: "England", checked: checked("import-store-country", "England") }, {
+      value: "Scotland", text: "Scotland", checked:
+      checked("import-store-country", "Scotland") }, { value: "Wales", text:
+      "Wales", checked: checked("import-store-country", "Wales") } ] }) }} {{
+      govukButton({ text: "Continue" }) }}
+    </form>
+
+    {# TODO: storage address outside GB destination — pending #}
+    <p class="govuk-body">
+      <a class="govuk-link" href="#"
+        >Our main business address is outside of Great Britain</a
+      >
+    </p>
+  </div>
+</div>
+{% endblock %}
