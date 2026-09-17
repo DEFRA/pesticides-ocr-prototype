@@ -460,6 +460,68 @@ module.exports = (router) => {
     res.redirect(P + '/store-own-address-lookup')
   })
 
+  // How many storage sites → quantity.
+  router.post(P + '/store-sites', (req, res) => {
+    const v = validate([
+      {
+        field: 'store-sites',
+        message: 'Select the number of sites you are responsible for',
+        valid: filled(req.session.data['store-sites'])
+      }
+    ])
+    if (!v.ok) return res.render(view('store-sites'), v)
+    const back = consumeReturnTo(req)
+    if (back) return res.redirect(P + '/' + back)
+    res.redirect(P + '/quantity')
+  })
+
+  // Storage location lookup (own, different location) → how many sites.
+  // "Enter an address manually" links straight to store-sites for now.
+  router.post(P + '/store-own-address-lookup', (req, res) => {
+    const v = validate([
+      {
+        field: 'store-postcode',
+        message: 'Enter a postcode',
+        valid: filled(req.session.data['store-postcode'])
+      }
+    ])
+    if (!v.ok) return res.render(view('store-own-address-lookup'), v)
+    const back = consumeReturnTo(req)
+    if (back) return res.redirect(P + '/' + back)
+    res.redirect(P + '/store-own-address-result')
+  })
+
+  // Storage location entered manually → how many sites.
+  router.post(P + '/store-own-address-manual', (req, res) => {
+    const d = req.session.data
+    const v = validate([
+      {
+        field: 'store-line-1',
+        message: 'Enter address line 1',
+        valid: filled(d['store-line-1'])
+      },
+      {
+        field: 'store-town',
+        message: 'Enter a town or city',
+        valid: filled(d['store-town'])
+      },
+      {
+        field: 'store-postcode',
+        message: 'Enter a postcode',
+        valid: filled(d['store-postcode'])
+      },
+      {
+        field: 'store-country',
+        message: 'Select a country',
+        valid: filled(d['store-country'])
+      }
+    ])
+    if (!v.ok) return res.render(view('store-own-address-manual'), v)
+    const back = consumeReturnTo(req)
+    if (back) return res.redirect(P + '/' + back)
+    res.redirect(P + '/store-sites')
+  })
+
   // --- Additional addresses branch ---
   router.post(P + '/additional-addresses-question', (req, res) => {
     const v = validate([
