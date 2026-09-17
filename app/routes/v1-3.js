@@ -23,6 +23,23 @@ const V = 'v1-3'
 const P = '/' + V // URL prefix for redirects
 const view = (name) => V + '/' + name // view path for render (app/views/v1-3/…)
 
+// v1.3 sector → subsector → schemes chain (Using journey). A subsector page
+// appears per selected sector (Agriculture/Amenity/Horticulture, in that order);
+// the assurance-schemes page only if Agriculture or Horticulture was selected;
+// then on to store-applied. Given the page just completed (null at the start),
+// return the next page name in the chain.
+const sectorChainNext = (afterPage, sectors) => {
+  const steps = []
+  if (sectors.includes('Agriculture')) steps.push('agri-subsectors')
+  if (sectors.includes('Amenity')) steps.push('amenity-subsectors')
+  if (sectors.includes('Horticulture')) steps.push('horti-subsectors')
+  if (sectors.includes('Agriculture') || sectors.includes('Horticulture')) {
+    steps.push('assurance-schemes')
+  }
+  steps.push('store-applied')
+  return steps[steps.indexOf(afterPage) + 1]
+}
+
 module.exports = (router) => {
   // Bare version root → the version's start page. Without this, /v1-2 has no
   // matching view and hits the Prototype Kit's (broken) built-in 404 page.
@@ -263,9 +280,27 @@ module.exports = (router) => {
     if (!v.ok) return res.render(view('sector'), v)
     const back = consumeReturnTo(req)
     if (back) return res.redirect(P + '/' + back)
-    const showAssurance =
-      sectors.includes('Agriculture') || sectors.includes('Horticulture')
-    res.redirect(P + (showAssurance ? '/assurance-schemes' : '/store-applied'))
+    res.redirect(P + '/' + sectorChainNext(null, sectors))
+  })
+
+  // Agricultural subsectors (shown when Agriculture is a selected sector).
+  router.post(P + '/agri-subsectors', (req, res) => {
+    const d = req.session.data
+    const sub = toArray(d['agri-subsector'])
+    const v = validate([
+      {
+        field: 'agri-subsector',
+        message:
+          'Select an agricultural sector, or describe your work in the ‘Other’ box',
+        valid: sub.length > 0 || filled(d['agri-subsector-other'])
+      }
+    ])
+    if (!v.ok) return res.render(view('agri-subsectors'), v)
+    const back = consumeReturnTo(req)
+    if (back) return res.redirect(P + '/' + back)
+    res.redirect(
+      P + '/' + sectorChainNext('agri-subsectors', toArray(d.sector))
+    )
   })
 
   router.post(P + '/activity-at-address', (req, res) => {
