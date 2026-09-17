@@ -360,38 +360,19 @@ module.exports = (router) => {
     res.redirect(afterQuantity(toArray(req.session.data.activities)))
   })
 
-  // --- Quantity: pick how to express it (amount or area), fill the revealed
-  // field, then branch (amateur-only skips sector) ---
+  // Quantity band (Using journey) → the combined check-answers.
   router.post(P + '/quantity', (req, res) => {
-    const d = req.session.data
-    const type = d['quantity-type']
-
-    const rules = [
+    const v = validate([
       {
-        field: 'quantity-type',
-        message: 'Select how you want to give the quantity',
-        valid: filled(type)
-      }
-    ]
-    if (type === 'amount') {
-      rules.push({
         field: 'quantity',
-        message: 'Enter an estimated annual quantity',
-        valid: filled(d.quantity)
-      })
-    }
-    if (type === 'area') {
-      rules.push({
-        field: 'area',
-        message: 'Enter an estimated annual area covered',
-        valid: filled(d.area)
-      })
-    }
-
-    const v = validate(rules)
+        message: 'Select the quantity range that best matches your use',
+        valid: filled(req.session.data.quantity)
+      }
+    ])
     if (!v.ok) return res.render(view('quantity'), v)
-
-    res.redirect(afterQuantity(toArray(d.activities)))
+    const back = consumeReturnTo(req)
+    if (back) return res.redirect(P + '/' + back)
+    res.redirect(P + '/check-answers')
   })
 
   // Assurance schemes (optional, no validation) → next in the sector chain.
@@ -423,9 +404,60 @@ module.exports = (router) => {
       return res.redirect(P + '/storing-where')
     }
     if (answer === 'Yes, a third party stores them for us') {
-      return res.redirect(P + '/store-sites')
+      return res.redirect(P + '/store-3rd-party-contact')
     }
     res.redirect(P + '/quantity')
+  })
+
+  // Third-party storage contact → how many sites.
+  router.post(P + '/store-3rd-party-contact', (req, res) => {
+    const d = req.session.data
+    const v = validate([
+      {
+        field: 'store-3p-name',
+        message: 'Enter a contact name',
+        valid: filled(d['store-3p-name'])
+      },
+      {
+        field: 'store-3p-business',
+        message: 'Enter the business name',
+        valid: filled(d['store-3p-business'])
+      },
+      {
+        field: 'store-3p-telephone',
+        message: 'Enter a telephone number',
+        valid: filled(d['store-3p-telephone'])
+      },
+      {
+        field: 'store-3p-email',
+        message: 'Enter an email address',
+        valid: filled(d['store-3p-email'])
+      }
+    ])
+    if (!v.ok) return res.render(view('store-3rd-party-contact'), v)
+    const back = consumeReturnTo(req)
+    if (back) return res.redirect(P + '/' + back)
+    res.redirect(P + '/store-sites')
+  })
+
+  // Where do you store? Main address → how many sites; different location →
+  // storage address lookup.
+  router.post(P + '/storing-where', (req, res) => {
+    const answer = req.session.data['storing-where']
+    const v = validate([
+      {
+        field: 'storing-where',
+        message: 'Select where you store products you apply',
+        valid: filled(answer)
+      }
+    ])
+    if (!v.ok) return res.render(view('storing-where'), v)
+    const back = consumeReturnTo(req)
+    if (back) return res.redirect(P + '/' + back)
+    if (answer === 'Main business address') {
+      return res.redirect(P + '/store-sites')
+    }
+    res.redirect(P + '/store-own-address-lookup')
   })
 
   // --- Additional addresses branch ---
