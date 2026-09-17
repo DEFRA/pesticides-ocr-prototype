@@ -49,7 +49,8 @@ const activityEntry = {
   using: 'who-applies',
   manufacturing: 'manufacture-products',
   importing: 'import-products',
-  processing: 'process-products'
+  processing: 'process-products',
+  selling: 'sell'
 }
 const firstActivityEntry = (activities) => {
   for (const a of activities) {
@@ -57,6 +58,11 @@ const firstActivityEntry = (activities) => {
   }
   return 'check-answers'
 }
+
+// Selling-only skips the common address/contact pages (business-name → sell), so
+// the Sell flow itself collects the head-office address and contact when true.
+const isSellingOnly = (activities) =>
+  activities.length === 1 && activities[0] === 'selling'
 
 module.exports = (router) => {
   // Bare version root → the version's start page. Without this, /v1-2 has no
@@ -586,6 +592,172 @@ module.exports = (router) => {
     res.redirect(P + '/check-answers')
   })
 
+  // --- Selling PPPs journey (Figma 1.3) -----------------------------------
+  // PPP use type splits into a professional branch (products → quantity → sites)
+  // and an amateur branch (quantity → …). Selling-only additionally collects the
+  // head-office address and contact within this flow. (Downstream pages are wired
+  // as the remaining Sell screens land.)
+  router.post(P + '/sell', (req, res) => {
+    const answer = req.session.data['sell-use-type']
+    const v = validate([
+      {
+        field: 'sell-use-type',
+        message:
+          'Select whether the PPPs you sell are mostly professional or amateur use',
+        valid: filled(answer)
+      }
+    ])
+    if (!v.ok) return res.render(view('sell'), v)
+    const back = consumeReturnTo(req)
+    if (back) return res.redirect(P + '/' + back)
+    if (answer === 'Mostly amateur use') {
+      return res.redirect(P + '/sell-amateur-quantity')
+    }
+    res.redirect(P + '/sell-pro-products')
+  })
+
+  router.post(P + '/sell-pro-products', (req, res) => {
+    const v = validate([
+      {
+        field: 'sell-pro-products',
+        message: 'Select what products you sell',
+        valid: filled(req.session.data['sell-pro-products'])
+      }
+    ])
+    if (!v.ok) return res.render(view('sell-pro-products'), v)
+    const back = consumeReturnTo(req)
+    if (back) return res.redirect(P + '/' + back)
+    res.redirect(P + '/sell-pro-quantity')
+  })
+
+  router.post(P + '/sell-amateur-quantity', (req, res) => {
+    const v = validate([
+      {
+        field: 'sell-amateur-quantity',
+        message: 'Enter the estimated annual quantity',
+        valid: filled(req.session.data['sell-amateur-quantity'])
+      }
+    ])
+    if (!v.ok) return res.render(view('sell-amateur-quantity'), v)
+    const back = consumeReturnTo(req)
+    if (back) return res.redirect(P + '/' + back)
+    // Selling-only skipped the common address/contact pages, so collect the head
+    // office address next; otherwise those were already captured → check-answers.
+    if (isSellingOnly(toArray(req.session.data.activities))) {
+      return res.redirect(P + '/sell-amateur-head-office-address-lookup')
+    }
+    res.redirect(P + '/check-answers')
+  })
+
+  router.post(P + '/sell-pro-quantity', (req, res) => {
+    const v = validate([
+      {
+        field: 'sell-pro-quantity',
+        message: 'Enter the estimated annual quantity',
+        valid: filled(req.session.data['sell-pro-quantity'])
+      }
+    ])
+    if (!v.ok) return res.render(view('sell-pro-quantity'), v)
+    const back = consumeReturnTo(req)
+    if (back) return res.redirect(P + '/' + back)
+    res.redirect(P + '/sell-pro-sites')
+  })
+
+  router.post(P + '/sell-pro-sites', (req, res) => {
+    const v = validate([
+      {
+        field: 'sell-pro-sites',
+        message: 'Select the number of sites you are responsible for',
+        valid: filled(req.session.data['sell-pro-sites'])
+      }
+    ])
+    if (!v.ok) return res.render(view('sell-pro-sites'), v)
+    const back = consumeReturnTo(req)
+    if (back) return res.redirect(P + '/' + back)
+    // Selling-only collects the head office address + contact within this flow.
+    if (isSellingOnly(toArray(req.session.data.activities))) {
+      return res.redirect(P + '/sell-amateur-head-office-address-lookup')
+    }
+    res.redirect(P + '/check-answers')
+  })
+
+  // Head office address (used by both Sell branches when selling-only). "Find an
+  // address" → postcode search; "enter manually" links to the manual page.
+  router.post(P + '/sell-amateur-head-office-address-lookup', (req, res) =>
+    res.redirect(P + '/sell-amateur-head-office-lookup-search')
+  )
+
+  router.post(P + '/sell-amateur-head-office-lookup-search', (req, res) => {
+    const v = validate([
+      {
+        field: 'sell-ho-postcode',
+        message: 'Enter a postcode',
+        valid: filled(req.session.data['sell-ho-postcode'])
+      }
+    ])
+    if (!v.ok)
+      return res.render(view('sell-amateur-head-office-lookup-search'), v)
+    const back = consumeReturnTo(req)
+    if (back) return res.redirect(P + '/' + back)
+    res.redirect(P + '/sell-amateur-head-office-address-lookup-result')
+  })
+
+  router.post(P + '/sell-amateur-head-office-manual-address', (req, res) => {
+    const d = req.session.data
+    const v = validate([
+      {
+        field: 'sell-ho-line-1',
+        message: 'Enter address line 1',
+        valid: filled(d['sell-ho-line-1'])
+      },
+      {
+        field: 'sell-ho-town',
+        message: 'Enter a town or city',
+        valid: filled(d['sell-ho-town'])
+      },
+      {
+        field: 'sell-ho-postcode',
+        message: 'Enter a postcode',
+        valid: filled(d['sell-ho-postcode'])
+      },
+      {
+        field: 'sell-ho-country',
+        message: 'Select a country',
+        valid: filled(d['sell-ho-country'])
+      }
+    ])
+    if (!v.ok)
+      return res.render(view('sell-amateur-head-office-manual-address'), v)
+    const back = consumeReturnTo(req)
+    if (back) return res.redirect(P + '/' + back)
+    res.redirect(P + '/sell-amateur-contact-details')
+  })
+
+  router.post(P + '/sell-amateur-contact-details', (req, res) => {
+    const d = req.session.data
+    const v = validate([
+      {
+        field: 'sell-contact-name',
+        message: 'Enter a name',
+        valid: filled(d['sell-contact-name'])
+      },
+      {
+        field: 'sell-contact-telephone',
+        message: 'Enter a telephone number',
+        valid: filled(d['sell-contact-telephone'])
+      },
+      {
+        field: 'sell-contact-email',
+        message: 'Enter an email address',
+        valid: filled(d['sell-contact-email'])
+      }
+    ])
+    if (!v.ok) return res.render(view('sell-amateur-contact-details'), v)
+    const back = consumeReturnTo(req)
+    if (back) return res.redirect(P + '/' + back)
+    res.redirect(P + '/check-answers')
+  })
+
   // --- Processing PPPs journey (Figma 1.3) --------------------------------
   // products → number of sites → free-text annual volume → check-answers.
 
@@ -942,7 +1114,23 @@ module.exports = (router) => {
   router.get(P + '/check-answers', (req, res) => {
     const d = req.session.data || {}
     const sectors = toArray(d.sector)
+    const acts = toArray(d.activities)
+    const sellPro = d['sell-use-type'] === 'Mostly professional use'
+    const sellSellingOnly = isSellingOnly(acts)
+    // Back link → the last page of the last-relevant activity flow.
+    let cyaBack = '/quantity'
+    if (acts.includes('importing')) cyaBack = '/import-quantity'
+    else if (acts.includes('processing')) cyaBack = '/process-quantity'
+    else if (acts.includes('manufacturing')) cyaBack = '/manufacture-quantity'
+    else if (acts.includes('selling')) {
+      cyaBack = sellSellingOnly
+        ? '/sell-amateur-contact-details'
+        : sellPro
+          ? '/sell-pro-sites'
+          : '/sell-amateur-quantity'
+    }
     res.render(view('check-answers'), {
+      cyaBack: P + cyaBack,
       // Resolved "where do you store" label lines (kept out of the template so
       // the formatter can't split the multi-word map keys used for lookup)
       usingStoringWhereText:
@@ -974,7 +1162,12 @@ module.exports = (router) => {
         d['import-storing-where'] ===
           'A different location to the main business address',
       importShowStorageSites:
-        !!d['import-storing'] && d['import-storing'] !== NO_STORE
+        !!d['import-storing'] && d['import-storing'] !== NO_STORE,
+      // Selling PPPs section. Selling-only collected the head-office address +
+      // contact in the Sell flow, so business-details shows those, not the common
+      // ones.
+      sellPro: sellPro,
+      sellSellingOnly: sellSellingOnly
     })
   })
 

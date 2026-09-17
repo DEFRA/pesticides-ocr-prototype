@@ -1,27 +1,22 @@
 {% extends "layouts/main.html" %} {% set basePath = "/v1-3" %} {% from
 "govuk/components/summary-list/macro.njk" import govukSummaryList %} {% from
 "govuk/components/button/macro.njk" import govukButton %} {% set pageName =
-"Check your details" %} {# Back to the last activity's final page. Boolean flags
-(usingAssurance, store*, import*) and the resolved storing-where label lines are
-computed in the /check-answers GET route — the formatter reflows {% set %}
-blocks like prose and would break in-template string comparisons and multi-word
-map keys. #} {% set backLink = (basePath + "/import-quantity") if
-(data.activities and "importing" in data.activities) else ((basePath +
-"/process-quantity") if (data.activities and "processing" in data.activities)
-else ((basePath + "/manufacture-quantity") if (data.activities and
-"manufacturing" in data.activities) else (basePath + "/quantity"))) %} {% set
-activityLabels = { "using": "Using PPPs as part of your work", "manufacturing":
-"Manufacturing PPPs", "importing": "Import PPPs", "processing": "Processing
-PPPs", "selling": "Selling PPPs", "distributing": "Distributing PPPs",
-"storing-only": "Only storing PPPs for other businesses" } %} {# Which field
-holds the subsectors for each main sector, for the nested bullets #} {% set
-subsectorMap = { "Agriculture": data["agri-subsector"], "Horticulture":
-data["horti-subsector"], "Amenity": data["amenity-subsector"] } %} {# Render one
-or many coded values as their labels, one per line #} {% macro labelled(value,
-labels) %} {%- if value -%} {%- if value is string -%}{{ labels[value] or value
-}} {%- else -%}{% for v in value %}{{ labels[v] or v }}{% if not loop.last %}<br />{%
-endif %}{% endfor %} {%- endif -%} {%- endif -%} {% endmacro %} {% block content
-%}
+"Check your details" %} {# Boolean flags (usingAssurance, store*, import*,
+sell*), the resolved storing-where label lines, and the back link are computed
+in the /check-answers GET route — the formatter reflows {% set %} blocks like
+prose and would break in-template string comparisons and multi-word map keys. #}
+{% set backLink = cyaBack %} {% set activityLabels = { "using": "Using PPPs as
+part of your work", "manufacturing": "Manufacturing PPPs", "importing": "Import
+PPPs", "processing": "Processing PPPs", "selling": "Selling PPPs",
+"distributing": "Distributing PPPs", "storing-only": "Only storing PPPs for
+other businesses" } %} {# Which field holds the subsectors for each main sector,
+for the nested bullets #} {% set subsectorMap = { "Agriculture":
+data["agri-subsector"], "Horticulture": data["horti-subsector"], "Amenity":
+data["amenity-subsector"] } %} {# Render one or many coded values as their
+labels, one per line #} {% macro labelled(value, labels) %} {%- if value -%} {%-
+if value is string -%}{{ labels[value] or value }} {%- else -%}{% for v in value
+%}{{ labels[v] or v }}{% if not loop.last %}<br />{% endif %}{% endfor %} {%-
+endif -%} {%- endif -%} {% endmacro %} {% block content %}
 <div class="govuk-grid-row">
   <div class="govuk-grid-column-two-thirds">
     <h1 class="govuk-heading-xl">Check your details</h1>
@@ -32,34 +27,66 @@ endif %}{% endfor %} {%- endif -%} {%- endif -%} {% endmacro %} {% block content
     else %}{{ data["address-line-1"] }}{% if data["address-line-2"] %}<br />{{
     data["address-line-2"] }}{% endif %}<br />{{ data["address-town"] }}<br />{{
     data["address-postcode"] }}<br />{{ data["address-country"] }}{% endif %}{%
-    endset %}
+    endset %} {% set headOfficeHtml %}{% if data["sell-ho-line-1"] %}{{
+    data["sell-ho-line-1"] }}{% if data["sell-ho-line-2"] %}<br />{{
+    data["sell-ho-line-2"] }}{% endif %}<br />{{ data["sell-ho-town"] }}<br />{{
+    data["sell-ho-postcode"] }}<br />{{ data["sell-ho-country"] }}{% else %}{{
+    data["sell-ho-building"] or "Pesticides House" }}<br />{{
+    data["sell-ho-postcode"] or "AA3 1AB" }}{% endif %}{% endset %}
 
     <h2 class="govuk-heading-m">Business details</h2>
 
-    {{ govukSummaryList({ rows: [ { key: { text: "Business PPP activities" },
-    value: { html: businessActivitiesHtml }, actions: { items: [{ href: basePath
-    + "/activities?returnTo=check-answers", text: "Change", visuallyHiddenText:
-    "business PPP activities" }] } }, { key: { text: "Business name" }, value: {
-    text: data["business-name"] }, actions: { items: [{ href: basePath +
+    {% set businessRows = [] %} {% set businessRows = (businessRows.push({ key:
+    { text: "Business PPP activities" }, value: { html: businessActivitiesHtml
+    }, actions: { items: [{ href: basePath +
+    "/activities?returnTo=check-answers", text: "Change", visuallyHiddenText:
+    "business PPP activities" }] } }), businessRows) %} {% set businessRows =
+    (businessRows.push({ key: { text: "Business name" }, value: { text:
+    data["business-name"] }, actions: { items: [{ href: basePath +
     "/business-name?returnTo=check-answers", text: "Change", visuallyHiddenText:
-    "business name" }] } }, { key: { text: "Main address" }, value: { html:
-    mainAddressHtml }, actions: { items: [{ href: basePath +
-    "/main-address?returnTo=check-answers", text: "Change", visuallyHiddenText:
-    "main address" }] } }, { key: { text: "Contact name" }, value: { text:
-    data["contact-name"] }, actions: { items: [{ href: basePath +
+    "business name" }] } }), businessRows) %} {% if sellSellingOnly %} {% set
+    businessRows = (businessRows.push({ key: { text: "Head office address" },
+    value: { html: headOfficeHtml }, actions: { items: [{ href: basePath +
+    "/sell-amateur-head-office-address-lookup?returnTo=check-answers", text:
+    "Change", visuallyHiddenText: "head office address" }] } }), businessRows)
+    %} {% set businessRows = (businessRows.push({ key: { text: "Contact name" },
+    value: { text: data["sell-contact-name"] }, actions: { items: [{ href:
+    basePath + "/sell-amateur-contact-details?returnTo=check-answers", text:
+    "Change", visuallyHiddenText: "contact name" }] } }), businessRows) %} {%
+    set businessRows = (businessRows.push({ key: { text: "Contact role" },
+    value: { text: data["sell-contact-job-title"] }, actions: { items: [{ href:
+    basePath + "/sell-amateur-contact-details?returnTo=check-answers", text:
+    "Change", visuallyHiddenText: "contact role" }] } }), businessRows) %} {%
+    set businessRows = (businessRows.push({ key: { text: "Contact email" },
+    value: { text: data["sell-contact-email"] }, actions: { items: [{ href:
+    basePath + "/sell-amateur-contact-details?returnTo=check-answers", text:
+    "Change", visuallyHiddenText: "contact email" }] } }), businessRows) %} {%
+    set businessRows = (businessRows.push({ key: { text: "Contact telephone" },
+    value: { text: data["sell-contact-telephone"] }, actions: { items: [{ href:
+    basePath + "/sell-amateur-contact-details?returnTo=check-answers", text:
+    "Change", visuallyHiddenText: "contact telephone" }] } }), businessRows) %}
+    {% else %} {% set businessRows = (businessRows.push({ key: { text: "Main
+    address" }, value: { html: mainAddressHtml }, actions: { items: [{ href:
+    basePath + "/main-address?returnTo=check-answers", text: "Change",
+    visuallyHiddenText: "main address" }] } }), businessRows) %} {% set
+    businessRows = (businessRows.push({ key: { text: "Contact name" }, value: {
+    text: data["contact-name"] }, actions: { items: [{ href: basePath +
     "/contact-details?returnTo=check-answers", text: "Change",
-    visuallyHiddenText: "contact name" }] } }, { key: { text: "Contact role" },
-    value: { text: data["contact-job-title"] }, actions: { items: [{ href:
+    visuallyHiddenText: "contact name" }] } }), businessRows) %} {% set
+    businessRows = (businessRows.push({ key: { text: "Contact role" }, value: {
+    text: data["contact-job-title"] }, actions: { items: [{ href: basePath +
+    "/contact-details?returnTo=check-answers", text: "Change",
+    visuallyHiddenText: "contact role" }] } }), businessRows) %} {% set
+    businessRows = (businessRows.push({ key: { text: "Contact email" }, value: {
+    text: data["contact-email"] }, actions: { items: [{ href: basePath +
+    "/contact-details?returnTo=check-answers", text: "Change",
+    visuallyHiddenText: "contact email" }] } }), businessRows) %} {% set
+    businessRows = (businessRows.push({ key: { text: "Contact telephone" },
+    value: { text: data["contact-telephone"] }, actions: { items: [{ href:
     basePath + "/contact-details?returnTo=check-answers", text: "Change",
-    visuallyHiddenText: "contact role" }] } }, { key: { text: "Contact email" },
-    value: { text: data["contact-email"] }, actions: { items: [{ href: basePath
-    + "/contact-details?returnTo=check-answers", text: "Change",
-    visuallyHiddenText: "contact email" }] } }, { key: { text: "Contact
-    telephone" }, value: { text: data["contact-telephone"] }, actions: { items:
-    [{ href: basePath + "/contact-details?returnTo=check-answers", text:
-    "Change", visuallyHiddenText: "contact telephone" }] } } ] }) }} {# ----
-    Using PPPs section ---- #} {% if data.activities and "using" in
-    data.activities %}
+    visuallyHiddenText: "contact telephone" }] } }), businessRows) %} {% endif
+    %} {{ govukSummaryList({ rows: businessRows }) }} {# ---- Using PPPs section
+    ---- #} {% if data.activities and "using" in data.activities %}
     <h2 class="govuk-heading-m">PPP activity details</h2>
 
     {% set thirdPartyHtml %}{{ data["third-party-name"] }}<br />{{
@@ -211,7 +238,37 @@ endif %}{% endfor %} {%- endif -%} {%- endif -%} {% endmacro %} {% block content
     year" }, value: { text: processQuantityText | trim }, actions: { items: [{
     href: basePath + "/process-quantity?returnTo=check-answers", text: "Change",
     visuallyHiddenText: "volume processed in the last year" }] } } ] }) }} {%
-    endif %}
+    endif %} {# ---- Selling PPPs section ---- #} {% if data.activities and
+    "selling" in data.activities %}
+    <h2 class="govuk-heading-m">PPP activity details</h2>
+
+    {% set sellProVolText %}{% if data["sell-pro-quantity"] %}{{
+    data["sell-pro-quantity"] }} kg/l{% endif %}{% endset %} {% set
+    sellAmateurVolText %}{% if data["sell-amateur-quantity"] %}£{{
+    data["sell-amateur-quantity"] }}{% endif %}{% endset %} {% set sellRows = []
+    %} {% set sellRows = (sellRows.push({ key: { text: "Professional or amateur
+    use?" }, value: { text: data["sell-use-type"] }, actions: { items: [{ href:
+    basePath + "/sell?returnTo=check-answers", text: "Change",
+    visuallyHiddenText: "professional or amateur use" }] } }), sellRows) %} {%
+    if sellPro %} {% set sellRows = (sellRows.push({ key: { text: "What products
+    do you sell?" }, value: { text: data["sell-pro-products"] }, actions: {
+    items: [{ href: basePath + "/sell-pro-products?returnTo=check-answers",
+    text: "Change", visuallyHiddenText: "what products you sell" }] } }),
+    sellRows) %} {% set sellRows = (sellRows.push({ key: { text: "Volume of PPPs
+    and ingredients or adjuvants sold in the last year" }, value: { text:
+    sellProVolText | trim }, actions: { items: [{ href: basePath +
+    "/sell-pro-quantity?returnTo=check-answers", text: "Change",
+    visuallyHiddenText: "volume sold in the last year" }] } }), sellRows) %} {%
+    set sellRows = (sellRows.push({ key: { text: "How many selling sites?" },
+    value: { text: data["sell-pro-sites"] }, actions: { items: [{ href: basePath
+    + "/sell-pro-sites?returnTo=check-answers", text: "Change",
+    visuallyHiddenText: "how many selling sites" }] } }), sellRows) %} {% else
+    %} {% set sellRows = (sellRows.push({ key: { text: "Volume of PPPs and
+    ingredients or adjuvants sold in the last year" }, value: { text:
+    sellAmateurVolText | trim }, actions: { items: [{ href: basePath +
+    "/sell-amateur-quantity?returnTo=check-answers", text: "Change",
+    visuallyHiddenText: "volume sold in the last year" }] } }), sellRows) %} {%
+    endif %} {{ govukSummaryList({ rows: sellRows }) }} {% endif %}
 
     <form method="post" action="{{ basePath }}/check-answers" novalidate>
       {{ govukButton({ text: "Continue" }) }}

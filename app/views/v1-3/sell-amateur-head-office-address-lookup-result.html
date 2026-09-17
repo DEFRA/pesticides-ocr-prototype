@@ -1,0 +1,39 @@
+{% extends "layouts/main.html" %} {% set basePath = "/v1-3" %} {% from
+"govuk/components/button/macro.njk" import govukButton %} {% set pageName =
+"What is the address for your head office?" %} {% set backLink = basePath +
+"/sell-amateur-head-office-lookup-search" %} {% block content %}
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+    <h1 class="govuk-heading-xl">What is the address for your head office?</h1>
+
+    <p class="govuk-body">
+      1 address found for
+      <strong>{{ data["sell-ho-postcode"] or "AA3 1AB" }}</strong> and
+      <strong>{{ data["sell-ho-building"] or "Pesticides House" }}</strong>.
+      <a
+        class="govuk-link"
+        href="{{ basePath }}/sell-amateur-head-office-lookup-search"
+        >Search again</a
+      >
+    </p>
+
+    <div class="govuk-inset-text">
+      {{ data["sell-ho-building"] or "Pesticides House" }}, Chemical close,
+      City, {{ data["sell-ho-postcode"] or "AA3 1AB" }}
+    </div>
+
+    <div class="govuk-button-group">
+      {{ govukButton({ text: "Use this address", href: basePath +
+      "/sell-amateur-contact-details" }) }}
+      <span class="govuk-body"
+        >or
+        <a
+          class="govuk-link"
+          href="{{ basePath }}/sell-amateur-head-office-manual-address"
+          >enter an address manually</a
+        ></span
+      >
+    </div>
+  </div>
+</div>
+{% endblock %}
