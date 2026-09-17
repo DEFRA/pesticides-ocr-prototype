@@ -1,36 +1,31 @@
-{% extends "layouts/main.html" %}
-{% set basePath = "/v1-3" %}
-
-{% from "govuk/components/textarea/macro.njk" import govukTextarea %}
-{% from "govuk/components/button/macro.njk" import govukButton %}
-{% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
-
-{% set pageName = "What is your main business address?" %}
-{% set backLink = basePath + "/main-address" %}
-
-{% block content %}
+{% extends "layouts/main.html" %} {% set basePath = "/v1-3" %} {% from
+"govuk/components/textarea/macro.njk" import govukTextarea %} {% from
+"govuk/components/button/macro.njk" import govukButton %} {% from
+"govuk/components/error-summary/macro.njk" import govukErrorSummary %} {% set
+pageName = "What is your main business address?" %} {% set backLink = basePath +
+"/main-address" %} {% block content %}
 <div class="govuk-grid-row">
   <div class="govuk-grid-column-two-thirds">
-
-    {% if errorList %}{{ govukErrorSummary({ titleText: "There is a problem", errorList: errorList }) }}{% endif %}
+    {% if errorList %}{{ govukErrorSummary({ titleText: "There is a problem",
+    errorList: errorList }) }}{% endif %}
 
     <h1 class="govuk-heading-xl">What is your main business address?</h1>
-    <p class="govuk-body">If your main business address is outside Great Britain, enter the details below.</p>
+    <p class="govuk-body">
+      If your main business address is outside Great Britain, enter the details
+      below.
+    </p>
 
-    <form method="post" action="{{ basePath }}/address-international" novalidate>
-
-      {{ govukTextarea({
-        label: { text: "Enter your business address" },
-        id: "international-address",
-        name: "international-address",
-        errorMessage: { text: errors["international-address"] } if errors["international-address"],
-        value: data["international-address"]
-      }) }}
-
-      {{ govukButton({ text: "Continue" }) }}
-
+    <form
+      method="post"
+      action="{{ basePath }}/address-international"
+      novalidate
+    >
+      {{ govukTextarea({ label: { text: "Enter your business address" }, id:
+      "international-address", name: "international-address", errorMessage: {
+      text: errors["international-address"] } if
+      errors["international-address"], value: data["international-address"] })
+      }} {{ govukButton({ text: "Continue" }) }}
     </form>
-
   </div>
 </div>
 {% endblock %}

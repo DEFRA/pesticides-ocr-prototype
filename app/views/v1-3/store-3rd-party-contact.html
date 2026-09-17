@@ -1,72 +1,44 @@
-{% extends "layouts/main.html" %}
-{% set basePath = "/v1-3" %}
-
-{% from "govuk/components/input/macro.njk" import govukInput %}
-{% from "govuk/components/button/macro.njk" import govukButton %}
-{% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
-
-{% set pageName = "Who stores PPPs on your behalf?" %}
-{% set backLink = basePath + "/store-applied" %}
-
-{% block content %}
+{% extends "layouts/main.html" %} {% set basePath = "/v1-3" %} {% from
+"govuk/components/input/macro.njk" import govukInput %} {% from
+"govuk/components/button/macro.njk" import govukButton %} {% from
+"govuk/components/error-summary/macro.njk" import govukErrorSummary %} {% set
+pageName = "Who stores PPPs on your behalf?" %} {% set backLink = basePath +
+"/store-applied" %} {% block content %}
 <div class="govuk-grid-row">
   <div class="govuk-grid-column-two-thirds">
-
-    {% if errorList %}{{ govukErrorSummary({ titleText: "There is a problem", errorList: errorList }) }}{% endif %}
+    {% if errorList %}{{ govukErrorSummary({ titleText: "There is a problem",
+    errorList: errorList }) }}{% endif %}
 
     <h1 class="govuk-heading-xl">Who stores PPPs on your behalf?</h1>
-    <p class="govuk-body">We may need to contact someone about your organisation’s PPP storage. This should be a person with knowledge of these activities.</p>
+    <p class="govuk-body">
+      We may need to contact someone about your organisation’s PPP storage. This
+      should be a person with knowledge of these activities.
+    </p>
 
-    <form method="post" action="{{ basePath }}/store-3rd-party-contact" novalidate>
-
-      {{ govukInput({
-        label: { text: "Contact name" },
-        id: "store-3p-name",
-        name: "store-3p-name",
-        autocomplete: "name",
-        errorMessage: { text: errors["store-3p-name"] } if errors["store-3p-name"],
-        value: data["store-3p-name"]
-      }) }}
-
-      {{ govukInput({
-        label: { text: "Business name" },
-        id: "store-3p-business",
-        name: "store-3p-business",
-        errorMessage: { text: errors["store-3p-business"] } if errors["store-3p-business"],
-        value: data["store-3p-business"]
-      }) }}
-
-      {{ govukInput({
-        label: { text: "Job title or role (optional)" },
-        id: "store-3p-job-title",
-        name: "store-3p-job-title",
-        value: data["store-3p-job-title"]
-      }) }}
-
-      {{ govukInput({
-        label: { text: "Telephone number" },
-        id: "store-3p-telephone",
-        name: "store-3p-telephone",
-        type: "tel",
-        autocomplete: "tel",
-        errorMessage: { text: errors["store-3p-telephone"] } if errors["store-3p-telephone"],
-        value: data["store-3p-telephone"]
-      }) }}
-
-      {{ govukInput({
-        label: { text: "Email address" },
-        id: "store-3p-email",
-        name: "store-3p-email",
-        type: "email",
-        autocomplete: "email",
-        errorMessage: { text: errors["store-3p-email"] } if errors["store-3p-email"],
-        value: data["store-3p-email"]
-      }) }}
-
-      {{ govukButton({ text: "Continue" }) }}
-
+    <form
+      method="post"
+      action="{{ basePath }}/store-3rd-party-contact"
+      novalidate
+    >
+      {{ govukInput({ label: { text: "Contact name" }, id: "store-3p-name",
+      name: "store-3p-name", autocomplete: "name", errorMessage: { text:
+      errors["store-3p-name"] } if errors["store-3p-name"], value:
+      data["store-3p-name"] }) }} {{ govukInput({ label: { text: "Business name"
+      }, id: "store-3p-business", name: "store-3p-business", errorMessage: {
+      text: errors["store-3p-business"] } if errors["store-3p-business"], value:
+      data["store-3p-business"] }) }} {{ govukInput({ label: { text: "Job title
+      or role (optional)" }, id: "store-3p-job-title", name:
+      "store-3p-job-title", value: data["store-3p-job-title"] }) }} {{
+      govukInput({ label: { text: "Telephone number" }, id:
+      "store-3p-telephone", name: "store-3p-telephone", type: "tel",
+      autocomplete: "tel", errorMessage: { text: errors["store-3p-telephone"] }
+      if errors["store-3p-telephone"], value: data["store-3p-telephone"] }) }}
+      {{ govukInput({ label: { text: "Email address" }, id: "store-3p-email",
+      name: "store-3p-email", type: "email", autocomplete: "email",
+      errorMessage: { text: errors["store-3p-email"] } if
+      errors["store-3p-email"], value: data["store-3p-email"] }) }} {{
+      govukButton({ text: "Continue" }) }}
     </form>
-
   </div>
 </div>
 {% endblock %}

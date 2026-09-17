@@ -54,26 +54,64 @@ const activityEntry = {
   distributing: 'distribute-products',
   'storing-only': 'store-only-products'
 }
-const firstActivityEntry = (activities) => {
-  for (const a of activities) {
-    if (activityEntry[a]) return activityEntry[a]
+// Has this activity's flow been completed? (its final answer is in session).
+const activityDone = (act, d) => {
+  switch (act) {
+    case 'using':
+      return filled(d['quantity'])
+    case 'manufacturing':
+      return filled(d['manufacture-quantity'])
+    case 'importing':
+      return filled(d['import-quantity'])
+    case 'processing':
+      return filled(d['process-quantity'])
+    case 'distributing':
+      return filled(d['distribute-quantity'])
+    case 'storing-only':
+      return filled(d['store-only-quantity'])
+    case 'selling':
+      return filled(d['sell-pro-sites']) || filled(d['sell-amateur-quantity'])
+    default:
+      return true
   }
-  return 'check-answers'
 }
 
-// After an activity's flow ends, go to the next selected activity's entry (in
-// selection order — the checkbox DOM order), or check-answers when it was the
-// last one. This is what chains multiple selected activities before the CYA.
-const nextEntryAfter = (currentAct, activities) => {
-  const flow = activities.filter((a) => activityEntry[a])
-  const next = flow[flow.indexOf(currentAct) + 1]
-  return next ? activityEntry[next] : 'check-answers'
+// The entry page of the first selected activity (selection = checkbox DOM order)
+// that has NOT yet been completed, or check-answers when they all have. Used both
+// to chain multiple activities on a fresh walk and to walk only the newly-added
+// activity when the selection is changed from the check-answers page.
+const nextUnanswered = (activities, d) => {
+  for (const a of activities) {
+    if (activityEntry[a] && !activityDone(a, d)) return activityEntry[a]
+  }
+  return 'check-answers'
 }
 
 // Selling-only skips the common address/contact pages (business-name → sell), so
 // the Sell flow itself collects the head-office address and contact when true.
 const isSellingOnly = (activities) =>
   activities.length === 1 && activities[0] === 'selling'
+
+// Inverse of activityEntry: entry page → activity, for the entry-page back link.
+const entryActivity = Object.fromEntries(
+  Object.entries(activityEntry).map(([act, page]) => [page, act])
+)
+// The final page of an activity's flow (Sell varies by pro/amateur).
+const lastPageOfActivity = (act, d) => {
+  if (act === 'selling') {
+    return d['sell-use-type'] === 'Mostly professional use'
+      ? 'sell-pro-sites'
+      : 'sell-amateur-quantity'
+  }
+  return {
+    using: 'quantity',
+    manufacturing: 'manufacture-quantity',
+    importing: 'import-quantity',
+    processing: 'process-quantity',
+    distributing: 'distribute-quantity',
+    'storing-only': 'store-only-quantity'
+  }[act]
+}
 
 module.exports = (router) => {
   // Bare version root → the version's start page. Without this, /v1-2 has no
@@ -86,6 +124,24 @@ module.exports = (router) => {
   router.use((req, res, next) => {
     if (req.path.startsWith(P) && req.query.returnTo && req.session.data) {
       req.session.data.returnTo = req.query.returnTo
+    }
+    next()
+  })
+
+  // On an activity entry page that isn't the first in the chain, point Back at the
+  // previous selected activity's final page (entry pages otherwise default Back to
+  // contact-details). Templates use `entryBackLink or <default>`.
+  router.use((req, res, next) => {
+    if (req.method === 'GET' && req.path.startsWith(P + '/')) {
+      const act = entryActivity[req.path.slice(P.length + 1).replace(/\/$/, '')]
+      const acts = toArray(
+        req.session.data && req.session.data.activities
+      ).filter((a) => activityEntry[a])
+      const idx = act ? acts.indexOf(act) : -1
+      if (idx > 0) {
+        res.locals.entryBackLink =
+          P + '/' + lastPageOfActivity(acts[idx - 1], req.session.data)
+      }
     }
     next()
   })
@@ -103,7 +159,7 @@ module.exports = (router) => {
   // business name, so route there; the per-activity traversal after that is wired
   // as the Figma 1.3 flows land.
   router.post(P + '/activities', (req, res) => {
-    const activities = toArray(req.session.data.activities)
+    let activities = toArray(req.session.data.activities)
     const v = validate([
       {
         field: 'activities',
@@ -112,8 +168,26 @@ module.exports = (router) => {
       }
     ])
     if (!v.ok) return res.render(view('activities'), v)
+
+    // Reorder to the click order captured client-side (activities-order); anything
+    // not in it (e.g. JS off) keeps DOM order at the end. This is the order the
+    // activity flows are then traversed in.
+    const clickOrder = (req.session.data['activities-order'] || '')
+      .split(',')
+      .filter(Boolean)
+    activities = [
+      ...clickOrder.filter((a) => activities.includes(a)),
+      ...activities.filter((a) => !clickOrder.includes(a))
+    ]
+    req.session.data.activities = activities
     const back = consumeReturnTo(req)
-    if (back) return res.redirect(P + '/' + back)
+    // Changed from the CYA (returnTo set): walk the first newly-selected activity
+    // that has no answers yet, otherwise fall back to where we came from (the CYA).
+    if (back) {
+      return res.redirect(
+        P + '/' + nextUnanswered(activities, req.session.data)
+      )
+    }
     res.redirect(P + '/business-name')
   })
 
@@ -237,11 +311,8 @@ module.exports = (router) => {
     if (!v.ok) return res.render(view('contact-details'), v)
     const back = consumeReturnTo(req)
     if (back) return res.redirect(P + '/' + back)
-    // Hand off to the first selected activity's sub-flow. Ordered chaining across
-    // multiple activities is added as the remaining flows land.
-    res.redirect(
-      P + '/' + firstActivityEntry(toArray(req.session.data.activities))
-    )
+    // Hand off to the first not-yet-answered selected activity's sub-flow.
+    res.redirect(P + '/' + nextUnanswered(toArray(d.activities), d))
   })
 
   // --- Using PPPs journey (Figma 1.3) -------------------------------------
@@ -409,7 +480,9 @@ module.exports = (router) => {
     const back = consumeReturnTo(req)
     if (back) return res.redirect(P + '/' + back)
     res.redirect(
-      P + '/' + nextEntryAfter('using', toArray(req.session.data.activities))
+      P +
+        '/' +
+        nextUnanswered(toArray(req.session.data.activities), req.session.data)
     )
   })
 
@@ -605,7 +678,7 @@ module.exports = (router) => {
     res.redirect(
       P +
         '/' +
-        nextEntryAfter('manufacturing', toArray(req.session.data.activities))
+        nextUnanswered(toArray(req.session.data.activities), req.session.data)
     )
   })
 
@@ -664,7 +737,9 @@ module.exports = (router) => {
       return res.redirect(P + '/sell-amateur-head-office-address-lookup')
     }
     res.redirect(
-      P + '/' + nextEntryAfter('selling', toArray(req.session.data.activities))
+      P +
+        '/' +
+        nextUnanswered(toArray(req.session.data.activities), req.session.data)
     )
   })
 
@@ -698,7 +773,9 @@ module.exports = (router) => {
       return res.redirect(P + '/sell-amateur-head-office-address-lookup')
     }
     res.redirect(
-      P + '/' + nextEntryAfter('selling', toArray(req.session.data.activities))
+      P +
+        '/' +
+        nextUnanswered(toArray(req.session.data.activities), req.session.data)
     )
   })
 
@@ -777,7 +854,9 @@ module.exports = (router) => {
     const back = consumeReturnTo(req)
     if (back) return res.redirect(P + '/' + back)
     res.redirect(
-      P + '/' + nextEntryAfter('selling', toArray(req.session.data.activities))
+      P +
+        '/' +
+        nextUnanswered(toArray(req.session.data.activities), req.session.data)
     )
   })
 
@@ -827,7 +906,7 @@ module.exports = (router) => {
     res.redirect(
       P +
         '/' +
-        nextEntryAfter('storing-only', toArray(req.session.data.activities))
+        nextUnanswered(toArray(req.session.data.activities), req.session.data)
     )
   })
 
@@ -876,7 +955,7 @@ module.exports = (router) => {
     res.redirect(
       P +
         '/' +
-        nextEntryAfter('distributing', toArray(req.session.data.activities))
+        nextUnanswered(toArray(req.session.data.activities), req.session.data)
     )
   })
 
@@ -925,7 +1004,7 @@ module.exports = (router) => {
     res.redirect(
       P +
         '/' +
-        nextEntryAfter('processing', toArray(req.session.data.activities))
+        nextUnanswered(toArray(req.session.data.activities), req.session.data)
     )
   })
 
@@ -1097,7 +1176,7 @@ module.exports = (router) => {
     res.redirect(
       P +
         '/' +
-        nextEntryAfter('importing', toArray(req.session.data.activities))
+        nextUnanswered(toArray(req.session.data.activities), req.session.data)
     )
   })
 

@@ -1,55 +1,34 @@
-{% extends "layouts/main.html" %}
-{% set basePath = "/v1-3" %}
-
-{% from "govuk/components/checkboxes/macro.njk" import govukCheckboxes %}
-{% from "govuk/components/textarea/macro.njk" import govukTextarea %}
-{% from "govuk/components/button/macro.njk" import govukButton %}
-{% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
-
-{% set pageName = "What agricultural sectors do you apply PPPs?" %}
-{% set backLink = basePath + "/sector" %}
-
-{% block content %}
+{% extends "layouts/main.html" %} {% set basePath = "/v1-3" %} {% from
+"govuk/components/checkboxes/macro.njk" import govukCheckboxes %} {% from
+"govuk/components/textarea/macro.njk" import govukTextarea %} {% from
+"govuk/components/button/macro.njk" import govukButton %} {% from
+"govuk/components/error-summary/macro.njk" import govukErrorSummary %} {% set
+pageName = "What agricultural sectors do you apply PPPs?" %} {% set backLink =
+basePath + "/sector" %} {% block content %}
 <div class="govuk-grid-row">
   <div class="govuk-grid-column-two-thirds">
-
-    {% if errorList %}{{ govukErrorSummary({ titleText: "There is a problem", errorList: errorList }) }}{% endif %}
+    {% if errorList %}{{ govukErrorSummary({ titleText: "There is a problem",
+    errorList: errorList }) }}{% endif %}
 
     <form method="post" action="{{ basePath }}/agri-subsectors" novalidate>
-
-      {{ govukCheckboxes({
-        name: "agri-subsector",
-        errorMessage: { text: errors["agri-subsector"] } if errors["agri-subsector"],
-        fieldset: {
-          legend: {
-            text: "What agricultural sectors do you apply PPPs?",
-            isPageHeading: true,
-            classes: "govuk-fieldset__legend--l"
-          }
-        },
-        hint: { text: "Select all that apply" },
-        items: [
-          { value: "Arable", text: "Arable", checked: checked("agri-subsector", "Arable") },
-          { value: "Outdoor vegetables", text: "Outdoor vegetables", checked: checked("agri-subsector", "Outdoor vegetables") },
-          { value: "Grasslands and fodder crops", text: "Grasslands and fodder crops", checked: checked("agri-subsector", "Grasslands and fodder crops") }
-        ]
-      }) }}
+      {{ govukCheckboxes({ name: "agri-subsector", errorMessage: { text:
+      errors["agri-subsector"] } if errors["agri-subsector"], fieldset: {
+      legend: { text: "What agricultural sectors do you apply PPPs?",
+      isPageHeading: true, classes: "govuk-fieldset__legend--l" } }, hint: {
+      text: "Select all that apply" }, items: [ { value: "Arable", text:
+      "Arable", checked: checked("agri-subsector", "Arable") }, { value:
+      "Outdoor vegetables", text: "Outdoor vegetables", checked:
+      checked("agri-subsector", "Outdoor vegetables") }, { value: "Grasslands
+      and fodder crops", text: "Grasslands and fodder crops", checked:
+      checked("agri-subsector", "Grasslands and fodder crops") } ] }) }}
 
       <p class="govuk-body">or</p>
 
-      {{ govukTextarea({
-        label: { text: "Other", classes: "govuk-label--s" },
-        hint: { text: "Describe your main type of work in a few words" },
-        id: "agri-subsector-other",
-        name: "agri-subsector-other",
-        rows: 3,
-        value: data["agri-subsector-other"]
-      }) }}
-
-      {{ govukButton({ text: "Continue" }) }}
-
+      {{ govukTextarea({ label: { text: "Other", classes: "govuk-label--s" },
+      hint: { text: "Describe your main type of work in a few words" }, id:
+      "agri-subsector-other", name: "agri-subsector-other", rows: 3, value:
+      data["agri-subsector-other"] }) }} {{ govukButton({ text: "Continue" }) }}
     </form>
-
   </div>
 </div>
 {% endblock %}

@@ -1,83 +1,51 @@
-{% extends "layouts/main.html" %}
-{% set basePath = "/v1-3" %}
-
-{% from "govuk/components/input/macro.njk" import govukInput %}
-{% from "govuk/components/radios/macro.njk" import govukRadios %}
-{% from "govuk/components/button/macro.njk" import govukButton %}
-{% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
-
-{% set pageName = "Main site address" %}
-{% set backLink = basePath + "/address-lookup" %}
-
-{% block content %}
+{% extends "layouts/main.html" %} {% set basePath = "/v1-3" %} {% from
+"govuk/components/input/macro.njk" import govukInput %} {% from
+"govuk/components/radios/macro.njk" import govukRadios %} {% from
+"govuk/components/button/macro.njk" import govukButton %} {% from
+"govuk/components/error-summary/macro.njk" import govukErrorSummary %} {% set
+pageName = "Main site address" %} {% set backLink = basePath + "/address-lookup"
+%} {% block content %}
 <div class="govuk-grid-row">
   <div class="govuk-grid-column-two-thirds">
-
-    {% if errorList %}{{ govukErrorSummary({ titleText: "There is a problem", errorList: errorList }) }}{% endif %}
+    {% if errorList %}{{ govukErrorSummary({ titleText: "There is a problem",
+    errorList: errorList }) }}{% endif %}
 
     <h1 class="govuk-heading-xl">Main site address</h1>
-    <p class="govuk-body">This is the address most relevant to the PPP activities you are responsible for.</p>
+    <p class="govuk-body">
+      This is the address most relevant to the PPP activities you are
+      responsible for.
+    </p>
 
     <form method="post" action="{{ basePath }}/main-address" novalidate>
-
-      {{ govukInput({
-        label: { text: "Address line 1" },
-        id: "address-line-1",
-        name: "address-line-1",
-        autocomplete: "address-line1",
-        errorMessage: { text: errors["address-line-1"] } if errors["address-line-1"],
-        value: data["address-line-1"]
-      }) }}
-
-      {{ govukInput({
-        label: { text: "Address line 2 (optional)" },
-        id: "address-line-2",
-        name: "address-line-2",
-        autocomplete: "address-line2",
-        value: data["address-line-2"]
-      }) }}
-
-      {{ govukInput({
-        label: { text: "Town or city" },
-        id: "address-town",
-        name: "address-town",
-        classes: "govuk-!-width-two-thirds",
-        autocomplete: "address-level2",
-        errorMessage: { text: errors["address-town"] } if errors["address-town"],
-        value: data["address-town"]
-      }) }}
-
-      {{ govukInput({
-        label: { text: "Postcode" },
-        id: "address-postcode",
-        name: "address-postcode",
-        classes: "govuk-input--width-10",
-        autocomplete: "postal-code",
-        errorMessage: { text: errors["address-postcode"] } if errors["address-postcode"],
-        value: data["address-postcode"]
-      }) }}
-
-      {{ govukRadios({
-        name: "address-country",
-        errorMessage: { text: errors["address-country"] } if errors["address-country"],
-        fieldset: {
-          legend: { text: "Country" }
-        },
-        items: [
-          { value: "England", text: "England", checked: checked("address-country", "England") },
-          { value: "Scotland", text: "Scotland", checked: checked("address-country", "Scotland") },
-          { value: "Wales", text: "Wales", checked: checked("address-country", "Wales") }
-        ]
-      }) }}
-
-      {{ govukButton({ text: "Continue" }) }}
-
+      {{ govukInput({ label: { text: "Address line 1" }, id: "address-line-1",
+      name: "address-line-1", autocomplete: "address-line1", errorMessage: {
+      text: errors["address-line-1"] } if errors["address-line-1"], value:
+      data["address-line-1"] }) }} {{ govukInput({ label: { text: "Address line
+      2 (optional)" }, id: "address-line-2", name: "address-line-2",
+      autocomplete: "address-line2", value: data["address-line-2"] }) }} {{
+      govukInput({ label: { text: "Town or city" }, id: "address-town", name:
+      "address-town", classes: "govuk-!-width-two-thirds", autocomplete:
+      "address-level2", errorMessage: { text: errors["address-town"] } if
+      errors["address-town"], value: data["address-town"] }) }} {{ govukInput({
+      label: { text: "Postcode" }, id: "address-postcode", name:
+      "address-postcode", classes: "govuk-input--width-10", autocomplete:
+      "postal-code", errorMessage: { text: errors["address-postcode"] } if
+      errors["address-postcode"], value: data["address-postcode"] }) }} {{
+      govukRadios({ name: "address-country", errorMessage: { text:
+      errors["address-country"] } if errors["address-country"], fieldset: {
+      legend: { text: "Country" } }, items: [ { value: "England", text:
+      "England", checked: checked("address-country", "England") }, { value:
+      "Scotland", text: "Scotland", checked: checked("address-country",
+      "Scotland") }, { value: "Wales", text: "Wales", checked:
+      checked("address-country", "Wales") } ] }) }} {{ govukButton({ text:
+      "Continue" }) }}
     </form>
 
     <p class="govuk-body">
-      <a class="govuk-link" href="{{ basePath }}/address-international">Our main business address is outside of Great Britain</a>
+      <a class="govuk-link" href="{{ basePath }}/address-international"
+        >Our main business address is outside of Great Britain</a
+      >
     </p>
-
   </div>
 </div>
 {% endblock %}

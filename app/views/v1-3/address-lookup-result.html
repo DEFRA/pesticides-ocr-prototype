@@ -1,28 +1,37 @@
-{% extends "layouts/main.html" %}
-{% set basePath = "/v1-3" %}
-
-{% from "govuk/components/button/macro.njk" import govukButton %}
-
-{% set pageName = "What is the main address for your business or organisation?" %}
-{% set backLink = basePath + "/address-lookup" %}
-
-{% block content %}
+{% extends "layouts/main.html" %} {% set basePath = "/v1-3" %} {% from
+"govuk/components/button/macro.njk" import govukButton %} {% set pageName =
+"What is the main address for your business or organisation?" %} {% set backLink
+= basePath + "/address-lookup" %} {% block content %}
 <div class="govuk-grid-row">
   <div class="govuk-grid-column-two-thirds">
+    <h1 class="govuk-heading-xl">
+      What is the main address for your business or organisation?
+    </h1>
 
-    <h1 class="govuk-heading-xl">What is the main address for your business or organisation?</h1>
-
-    <p class="govuk-body">1 address found for <strong>{{ data["lookup-postcode"] or "AA3 1AB" }}</strong> and <strong>{{ data["lookup-building"] or "Pesticides House" }}</strong>. <a class="govuk-link" href="{{ basePath }}/address-lookup">Search again</a></p>
+    <p class="govuk-body">
+      1 address found for
+      <strong>{{ data["lookup-postcode"] or "AA3 1AB" }}</strong> and
+      <strong>{{ data["lookup-building"] or "Pesticides House" }}</strong>.
+      <a class="govuk-link" href="{{ basePath }}/address-lookup"
+        >Search again</a
+      >
+    </p>
 
     <div class="govuk-inset-text">
-      {{ data["lookup-building"] or "Pesticides House" }}, Chemical close, City, {{ data["lookup-postcode"] or "AA3 1AB" }}
+      {{ data["lookup-building"] or "Pesticides House" }}, Chemical close, City,
+      {{ data["lookup-postcode"] or "AA3 1AB" }}
     </div>
 
     <div class="govuk-button-group">
-      {{ govukButton({ text: "Use this address", href: basePath + "/contact-details" }) }}
-      <span class="govuk-body">or <a class="govuk-link" href="{{ basePath }}/main-address">enter an address manually</a></span>
+      {{ govukButton({ text: "Use this address", href: basePath +
+      "/contact-details" }) }}
+      <span class="govuk-body"
+        >or
+        <a class="govuk-link" href="{{ basePath }}/main-address"
+          >enter an address manually</a
+        ></span
+      >
     </div>
-
   </div>
 </div>
 {% endblock %}

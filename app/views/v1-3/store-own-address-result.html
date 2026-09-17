@@ -1,28 +1,35 @@
-{% extends "layouts/main.html" %}
-{% set basePath = "/v1-3" %}
-
-{% from "govuk/components/button/macro.njk" import govukButton %}
-
-{% set pageName = "What is the location where you store PPPs?" %}
-{% set backLink = basePath + "/store-own-address-lookup" %}
-
-{% block content %}
+{% extends "layouts/main.html" %} {% set basePath = "/v1-3" %} {% from
+"govuk/components/button/macro.njk" import govukButton %} {% set pageName =
+"What is the location where you store PPPs?" %} {% set backLink = basePath +
+"/store-own-address-lookup" %} {% block content %}
 <div class="govuk-grid-row">
   <div class="govuk-grid-column-two-thirds">
-
     <h1 class="govuk-heading-xl">What is the location where you store PPPs?</h1>
 
-    <p class="govuk-body">1 address found for <strong>{{ data["store-postcode"] or "AA3 1AB" }}</strong> and <strong>{{ data["store-building"] or "Pesticides House" }}</strong>. <a class="govuk-link" href="{{ basePath }}/store-own-address-lookup">Search again</a></p>
+    <p class="govuk-body">
+      1 address found for
+      <strong>{{ data["store-postcode"] or "AA3 1AB" }}</strong> and
+      <strong>{{ data["store-building"] or "Pesticides House" }}</strong>.
+      <a class="govuk-link" href="{{ basePath }}/store-own-address-lookup"
+        >Search again</a
+      >
+    </p>
 
     <div class="govuk-inset-text">
-      {{ data["store-building"] or "Pesticides House" }}, Chemical close, City, {{ data["store-postcode"] or "AA3 1AB" }}
+      {{ data["store-building"] or "Pesticides House" }}, Chemical close, City,
+      {{ data["store-postcode"] or "AA3 1AB" }}
     </div>
 
     <div class="govuk-button-group">
-      {{ govukButton({ text: "Use this address", href: basePath + "/store-sites" }) }}
-      <span class="govuk-body">or <a class="govuk-link" href="{{ basePath }}/store-own-address-manual">enter an address manually</a></span>
+      {{ govukButton({ text: "Use this address", href: basePath + "/store-sites"
+      }) }}
+      <span class="govuk-body"
+        >or
+        <a class="govuk-link" href="{{ basePath }}/store-own-address-manual"
+          >enter an address manually</a
+        ></span
+      >
     </div>
-
   </div>
 </div>
 {% endblock %}

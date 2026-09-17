@@ -1,60 +1,50 @@
-{% extends "layouts/main.html" %}
-{% set basePath = "/v1-3" %}
-
-{% from "govuk/components/checkboxes/macro.njk" import govukCheckboxes %}
-{% from "govuk/components/textarea/macro.njk" import govukTextarea %}
-{% from "govuk/components/button/macro.njk" import govukButton %}
-{% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
-
-{% set pageName = "Which sector are your PPP activities in?" %}
-{% set backLink = basePath + "/who-applies" %}
-
-{% block content %}
+{% extends "layouts/main.html" %} {% set basePath = "/v1-3" %} {% from
+"govuk/components/checkboxes/macro.njk" import govukCheckboxes %} {% from
+"govuk/components/textarea/macro.njk" import govukTextarea %} {% from
+"govuk/components/button/macro.njk" import govukButton %} {% from
+"govuk/components/error-summary/macro.njk" import govukErrorSummary %} {% set
+pageName = "Which sector are your PPP activities in?" %} {% set backLink =
+basePath + "/who-applies" %} {% block content %}
 <div class="govuk-grid-row">
   <div class="govuk-grid-column-two-thirds">
-
-    {% if errorList %}{{ govukErrorSummary({ titleText: "There is a problem", errorList: errorList }) }}{% endif %}
+    {% if errorList %}{{ govukErrorSummary({ titleText: "There is a problem",
+    errorList: errorList }) }}{% endif %}
 
     <form method="post" action="{{ basePath }}/sector" novalidate>
-
-      {{ govukCheckboxes({
-        name: "sector",
-        errorMessage: { text: errors["sector"] } if errors["sector"],
-        fieldset: {
-          legend: {
-            text: "Which sector are your PPP activities in?",
-            isPageHeading: true,
-            classes: "govuk-fieldset__legend--l"
-          }
-        },
-        hint: { text: "Select all that apply. Include activities where PPPs are applied by another organisation on your behalf." },
-        items: [
-          { value: "Agriculture", text: "Agriculture", hint: { text: "This includes arable, outdoor vegetables, grasslands & fodder crops." }, checked: checked("sector", "Agriculture") },
-          { value: "Amenity", text: "Amenity", hint: { text: "This includes managing public spaces, parks, sports grounds, golf courses, school fields, railway tracks, roadsides and industrial estates." }, checked: checked("sector", "Amenity") },
-          { value: "Business premises", text: "Business premises", hint: { text: "This includes property maintenance and Caretaking." }, checked: checked("sector", "Business premises") },
-          { value: "Forestry", text: "Forestry", hint: { text: "This includes managing woodlands, commercial timber forests, tree plantations and commercial woodland nurseries." }, checked: checked("sector", "Forestry") },
-          { value: "Horticulture", text: "Horticulture", hint: { text: "This includes edible protected crops, orchards & soft fruit, and ornamentals." }, checked: checked("sector", "Horticulture") },
-          { value: "Public Services and Local Authorities", text: "Public Services and Local Authorities", checked: checked("sector", "Public Services and Local Authorities") },
-          { value: "Schools and universities", text: "Schools and universities", checked: checked("sector", "Schools and universities") },
-          { value: "Sports Clubs and Facilities", text: "Sports Clubs and Facilities", checked: checked("sector", "Sports Clubs and Facilities") }
-        ]
-      }) }}
+      {{ govukCheckboxes({ name: "sector", errorMessage: { text:
+      errors["sector"] } if errors["sector"], fieldset: { legend: { text: "Which
+      sector are your PPP activities in?", isPageHeading: true, classes:
+      "govuk-fieldset__legend--l" } }, hint: { text: "Select all that apply.
+      Include activities where PPPs are applied by another organisation on your
+      behalf." }, items: [ { value: "Agriculture", text: "Agriculture", hint: {
+      text: "This includes arable, outdoor vegetables, grasslands & fodder
+      crops." }, checked: checked("sector", "Agriculture") }, { value:
+      "Amenity", text: "Amenity", hint: { text: "This includes managing public
+      spaces, parks, sports grounds, golf courses, school fields, railway
+      tracks, roadsides and industrial estates." }, checked: checked("sector",
+      "Amenity") }, { value: "Business premises", text: "Business premises",
+      hint: { text: "This includes property maintenance and Caretaking." },
+      checked: checked("sector", "Business premises") }, { value: "Forestry",
+      text: "Forestry", hint: { text: "This includes managing woodlands,
+      commercial timber forests, tree plantations and commercial woodland
+      nurseries." }, checked: checked("sector", "Forestry") }, { value:
+      "Horticulture", text: "Horticulture", hint: { text: "This includes edible
+      protected crops, orchards & soft fruit, and ornamentals." }, checked:
+      checked("sector", "Horticulture") }, { value: "Public Services and Local
+      Authorities", text: "Public Services and Local Authorities", checked:
+      checked("sector", "Public Services and Local Authorities") }, { value:
+      "Schools and universities", text: "Schools and universities", checked:
+      checked("sector", "Schools and universities") }, { value: "Sports Clubs
+      and Facilities", text: "Sports Clubs and Facilities", checked:
+      checked("sector", "Sports Clubs and Facilities") } ] }) }}
 
       <p class="govuk-body">or</p>
 
-      {{ govukTextarea({
-        label: { text: "Other", classes: "govuk-label--s" },
-        hint: { text: "Describe your main type of work in a few words" },
-        id: "sector-other",
-        name: "sector-other",
-        rows: 3,
-        value: data["sector-other"]
-      }) }}
-
-      {{ govukButton({ text: "Continue" }) }}
-
+      {{ govukTextarea({ label: { text: "Other", classes: "govuk-label--s" },
+      hint: { text: "Describe your main type of work in a few words" }, id:
+      "sector-other", name: "sector-other", rows: 3, value: data["sector-other"]
+      }) }} {{ govukButton({ text: "Continue" }) }}
     </form>
-
   </div>
 </div>
 {% endblock %}

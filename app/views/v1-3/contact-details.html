@@ -1,68 +1,43 @@
-{% extends "layouts/main.html" %}
-{% set basePath = "/v1-3" %}
-
-{% from "govuk/components/input/macro.njk" import govukInput %}
-{% from "govuk/components/button/macro.njk" import govukButton %}
-{% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
-
-{% set pageName = "Who should we contact about your PPP activities?" %}
-{% set backLink = basePath + "/address-lookup" %}
-
-{% block content %}
+{% extends "layouts/main.html" %} {% set basePath = "/v1-3" %} {% from
+"govuk/components/input/macro.njk" import govukInput %} {% from
+"govuk/components/button/macro.njk" import govukButton %} {% from
+"govuk/components/error-summary/macro.njk" import govukErrorSummary %} {% set
+pageName = "Who should we contact about your PPP activities?" %} {% set backLink
+= basePath + "/address-lookup" %} {% block content %}
 <div class="govuk-grid-row">
   <div class="govuk-grid-column-two-thirds">
+    {% if errorList %}{{ govukErrorSummary({ titleText: "There is a problem",
+    errorList: errorList }) }}{% endif %}
 
-    {% if errorList %}{{ govukErrorSummary({ titleText: "There is a problem", errorList: errorList }) }}{% endif %}
-
-    <h1 class="govuk-heading-xl">Who should we contact about your PPP activities?</h1>
-    <p class="govuk-body">We may need to contact someone about your organisation’s PPP activities. This should be a person with knowledge of these activities.</p>
+    <h1 class="govuk-heading-xl">
+      Who should we contact about your PPP activities?
+    </h1>
+    <p class="govuk-body">
+      We may need to contact someone about your organisation’s PPP activities.
+      This should be a person with knowledge of these activities.
+    </p>
 
     <form method="post" action="{{ basePath }}/contact-details" novalidate>
-
-      {{ govukInput({
-        label: { text: "Contact name" },
-        id: "contact-name",
-        name: "contact-name",
-        autocomplete: "name",
-        errorMessage: { text: errors["contact-name"] } if errors["contact-name"],
-        value: data["contact-name"]
-      }) }}
-
-      {{ govukInput({
-        label: { text: "Job title or role (optional)" },
-        id: "contact-job-title",
-        name: "contact-job-title",
-        value: data["contact-job-title"]
-      }) }}
-
-      {{ govukInput({
-        label: { text: "Telephone number" },
-        id: "contact-telephone",
-        name: "contact-telephone",
-        type: "tel",
-        autocomplete: "tel",
-        errorMessage: { text: errors["contact-telephone"] } if errors["contact-telephone"],
-        value: data["contact-telephone"]
-      }) }}
-
-      {{ govukInput({
-        label: { text: "Email address" },
-        id: "contact-email",
-        name: "contact-email",
-        type: "email",
-        autocomplete: "email",
-        errorMessage: { text: errors["contact-email"] } if errors["contact-email"],
-        value: data["contact-email"]
-      }) }}
+      {{ govukInput({ label: { text: "Contact name" }, id: "contact-name", name:
+      "contact-name", autocomplete: "name", errorMessage: { text:
+      errors["contact-name"] } if errors["contact-name"], value:
+      data["contact-name"] }) }} {{ govukInput({ label: { text: "Job title or
+      role (optional)" }, id: "contact-job-title", name: "contact-job-title",
+      value: data["contact-job-title"] }) }} {{ govukInput({ label: { text:
+      "Telephone number" }, id: "contact-telephone", name: "contact-telephone",
+      type: "tel", autocomplete: "tel", errorMessage: { text:
+      errors["contact-telephone"] } if errors["contact-telephone"], value:
+      data["contact-telephone"] }) }} {{ govukInput({ label: { text: "Email
+      address" }, id: "contact-email", name: "contact-email", type: "email",
+      autocomplete: "email", errorMessage: { text: errors["contact-email"] } if
+      errors["contact-email"], value: data["contact-email"] }) }}
 
       <div class="govuk-inset-text">
         If these contact details change in the future they must be updated
       </div>
 
       {{ govukButton({ text: "Continue" }) }}
-
     </form>
-
   </div>
 </div>
 {% endblock %}
