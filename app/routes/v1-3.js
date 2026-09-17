@@ -50,7 +50,8 @@ const activityEntry = {
   manufacturing: 'manufacture-products',
   importing: 'import-products',
   processing: 'process-products',
-  selling: 'sell'
+  selling: 'sell',
+  distributing: 'distribute-products'
 }
 const firstActivityEntry = (activities) => {
   for (const a of activities) {
@@ -758,6 +759,51 @@ module.exports = (router) => {
     res.redirect(P + '/check-answers')
   })
 
+  // --- Distributing PPPs journey (Figma 1.3) ------------------------------
+  // products → number of sites → free-text annual volume → check-answers.
+
+  router.post(P + '/distribute-products', (req, res) => {
+    const v = validate([
+      {
+        field: 'distribute-products',
+        message: 'Select what products you distribute',
+        valid: filled(req.session.data['distribute-products'])
+      }
+    ])
+    if (!v.ok) return res.render(view('distribute-products'), v)
+    const back = consumeReturnTo(req)
+    if (back) return res.redirect(P + '/' + back)
+    res.redirect(P + '/distribute-sites')
+  })
+
+  router.post(P + '/distribute-sites', (req, res) => {
+    const v = validate([
+      {
+        field: 'distribute-sites',
+        message: 'Select the number of sites you are responsible for',
+        valid: filled(req.session.data['distribute-sites'])
+      }
+    ])
+    if (!v.ok) return res.render(view('distribute-sites'), v)
+    const back = consumeReturnTo(req)
+    if (back) return res.redirect(P + '/' + back)
+    res.redirect(P + '/distribute-quantity')
+  })
+
+  router.post(P + '/distribute-quantity', (req, res) => {
+    const v = validate([
+      {
+        field: 'distribute-quantity',
+        message: 'Enter the estimated annual quantity',
+        valid: filled(req.session.data['distribute-quantity'])
+      }
+    ])
+    if (!v.ok) return res.render(view('distribute-quantity'), v)
+    const back = consumeReturnTo(req)
+    if (back) return res.redirect(P + '/' + back)
+    res.redirect(P + '/check-answers')
+  })
+
   // --- Processing PPPs journey (Figma 1.3) --------------------------------
   // products → number of sites → free-text annual volume → check-answers.
 
@@ -1121,6 +1167,7 @@ module.exports = (router) => {
     let cyaBack = '/quantity'
     if (acts.includes('importing')) cyaBack = '/import-quantity'
     else if (acts.includes('processing')) cyaBack = '/process-quantity'
+    else if (acts.includes('distributing')) cyaBack = '/distribute-quantity'
     else if (acts.includes('manufacturing')) cyaBack = '/manufacture-quantity'
     else if (acts.includes('selling')) {
       cyaBack = sellSellingOnly

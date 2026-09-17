@@ -268,7 +268,26 @@ endif -%} {%- endif -%} {% endmacro %} {% block content %}
     sellAmateurVolText | trim }, actions: { items: [{ href: basePath +
     "/sell-amateur-quantity?returnTo=check-answers", text: "Change",
     visuallyHiddenText: "volume sold in the last year" }] } }), sellRows) %} {%
-    endif %} {{ govukSummaryList({ rows: sellRows }) }} {% endif %}
+    endif %} {{ govukSummaryList({ rows: sellRows }) }} {% endif %} {# ----
+    Distributing PPPs section ---- #} {% if data.activities and "distributing"
+    in data.activities %}
+    <h2 class="govuk-heading-m">PPP activity details</h2>
+
+    {% set distributeQuantityText %}{% if data["distribute-quantity"] %}{{
+    data["distribute-quantity"] }} Kgs/litres{% endif %}{% endset %} {{
+    govukSummaryList({ rows: [ { key: { text: "What products do you distribute?"
+    }, value: { text: data["distribute-products"] }, actions: { items: [{ href:
+    basePath + "/distribute-products?returnTo=check-answers", text: "Change",
+    visuallyHiddenText: "what products you distribute" }] } }, { key: { text:
+    "How many distribution sites?" }, value: { text: data["distribute-sites"] },
+    actions: { items: [{ href: basePath +
+    "/distribute-sites?returnTo=check-answers", text: "Change",
+    visuallyHiddenText: "how many distribution sites" }] } }, { key: { text:
+    "Volume of PPPs and ingredients or adjuvants distributed in the last year"
+    }, value: { text: distributeQuantityText | trim }, actions: { items: [{
+    href: basePath + "/distribute-quantity?returnTo=check-answers", text:
+    "Change", visuallyHiddenText: "volume distributed in the last year" }] } } ]
+    }) }} {% endif %}
 
     <form method="post" action="{{ basePath }}/check-answers" novalidate>
       {{ govukButton({ text: "Continue" }) }}
