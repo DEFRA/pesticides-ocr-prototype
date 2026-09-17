@@ -303,6 +303,46 @@ module.exports = (router) => {
     )
   })
 
+  // Amenity subsectors (shown when Amenity is a selected sector).
+  router.post(P + '/amenity-subsectors', (req, res) => {
+    const d = req.session.data
+    const sub = toArray(d['amenity-subsector'])
+    const v = validate([
+      {
+        field: 'amenity-subsector',
+        message:
+          'Select an amenity sector, or describe your work in the ‘Other’ box',
+        valid: sub.length > 0 || filled(d['amenity-subsector-other'])
+      }
+    ])
+    if (!v.ok) return res.render(view('amenity-subsectors'), v)
+    const back = consumeReturnTo(req)
+    if (back) return res.redirect(P + '/' + back)
+    res.redirect(
+      P + '/' + sectorChainNext('amenity-subsectors', toArray(d.sector))
+    )
+  })
+
+  // Horticultural subsectors (shown when Horticulture is a selected sector).
+  router.post(P + '/horti-subsectors', (req, res) => {
+    const d = req.session.data
+    const sub = toArray(d['horti-subsector'])
+    const v = validate([
+      {
+        field: 'horti-subsector',
+        message:
+          'Select a horticultural sector, or describe your work in the ‘Other’ box',
+        valid: sub.length > 0 || filled(d['horti-subsector-other'])
+      }
+    ])
+    if (!v.ok) return res.render(view('horti-subsectors'), v)
+    const back = consumeReturnTo(req)
+    if (back) return res.redirect(P + '/' + back)
+    res.redirect(
+      P + '/' + sectorChainNext('horti-subsectors', toArray(d.sector))
+    )
+  })
+
   router.post(P + '/activity-at-address', (req, res) => {
     const v = validate([
       {
@@ -354,10 +394,16 @@ module.exports = (router) => {
     res.redirect(afterQuantity(toArray(d.activities)))
   })
 
-  // Assurance schemes is optional — no validation
-  router.post(P + '/assurance-schemes', (req, res) =>
-    res.redirect(P + '/additional-addresses-question')
-  )
+  // Assurance schemes (optional, no validation) → next in the sector chain.
+  router.post(P + '/assurance-schemes', (req, res) => {
+    const back = consumeReturnTo(req)
+    if (back) return res.redirect(P + '/' + back)
+    res.redirect(
+      P +
+        '/' +
+        sectorChainNext('assurance-schemes', toArray(req.session.data.sector))
+    )
+  })
 
   // --- Additional addresses branch ---
   router.post(P + '/additional-addresses-question', (req, res) => {

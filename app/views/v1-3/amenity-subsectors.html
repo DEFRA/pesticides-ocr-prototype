@@ -1,0 +1,57 @@
+{% extends "layouts/main.html" %}
+{% set basePath = "/v1-3" %}
+
+{% from "govuk/components/checkboxes/macro.njk" import govukCheckboxes %}
+{% from "govuk/components/textarea/macro.njk" import govukTextarea %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
+
+{% set pageName = "What amenity sectors do you apply PPPs?" %}
+{% set backLink = basePath + "/sector" %}
+
+{% block content %}
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+
+    {% if errorList %}{{ govukErrorSummary({ titleText: "There is a problem", errorList: errorList }) }}{% endif %}
+
+    <form method="post" action="{{ basePath }}/amenity-subsectors" novalidate>
+
+      {{ govukCheckboxes({
+        name: "amenity-subsector",
+        errorMessage: { text: errors["amenity-subsector"] } if errors["amenity-subsector"],
+        fieldset: {
+          legend: {
+            text: "What amenity sectors do you apply PPPs?",
+            isPageHeading: true,
+            classes: "govuk-fieldset__legend--l"
+          }
+        },
+        hint: { text: "Select all that apply" },
+        items: [
+          { value: "Parks", text: "parks", checked: checked("amenity-subsector", "Parks") },
+          { value: "Sports grounds, including golf courses", text: "sports grounds, including golf courses", checked: checked("amenity-subsector", "Sports grounds, including golf courses") },
+          { value: "Public or private property", text: "public or private property", checked: checked("amenity-subsector", "Public or private property") },
+          { value: "Infrastructure, such as roads, railways and waterways", text: "infrastructure, such as roads, railways and waterways", checked: checked("amenity-subsector", "Infrastructure, such as roads, railways and waterways") },
+          { value: "Utilities, such as transport and water companies", text: "utilities, such as transport and water companies", checked: checked("amenity-subsector", "Utilities, such as transport and water companies") }
+        ]
+      }) }}
+
+      <p class="govuk-body">or</p>
+
+      {{ govukTextarea({
+        label: { text: "Other", classes: "govuk-label--s" },
+        hint: { text: "Describe your main type of work in a few words" },
+        id: "amenity-subsector-other",
+        name: "amenity-subsector-other",
+        rows: 3,
+        value: data["amenity-subsector-other"]
+      }) }}
+
+      {{ govukButton({ text: "Continue" }) }}
+
+    </form>
+
+  </div>
+</div>
+{% endblock %}
