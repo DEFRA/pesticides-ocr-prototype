@@ -405,6 +405,29 @@ module.exports = (router) => {
     )
   })
 
+  // Do you store products you apply? Branch: own sites → where; 3rd party → how
+  // many sites; don't store → skip storage details (on to quantity).
+  router.post(P + '/store-applied', (req, res) => {
+    const answer = req.session.data['store-applied']
+    const v = validate([
+      {
+        field: 'store-applied',
+        message: 'Select whether you store products you apply',
+        valid: filled(answer)
+      }
+    ])
+    if (!v.ok) return res.render(view('store-applied'), v)
+    const back = consumeReturnTo(req)
+    if (back) return res.redirect(P + '/' + back)
+    if (answer === 'Yes, at sites we own') {
+      return res.redirect(P + '/storing-where')
+    }
+    if (answer === 'Yes, a third party stores them for us') {
+      return res.redirect(P + '/store-sites')
+    }
+    res.redirect(P + '/quantity')
+  })
+
   // --- Additional addresses branch ---
   router.post(P + '/additional-addresses-question', (req, res) => {
     const v = validate([
