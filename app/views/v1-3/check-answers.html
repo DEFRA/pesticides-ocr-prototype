@@ -1,21 +1,24 @@
 {% extends "layouts/main.html" %} {% set basePath = "/v1-3" %} {% from
 "govuk/components/summary-list/macro.njk" import govukSummaryList %} {% from
 "govuk/components/button/macro.njk" import govukButton %} {% set pageName =
-"Check your details" %} {% set backLink = basePath + "/quantity" %} {% set
-activityLabels = { "using": "Using PPPs as part of your work", "manufacturing":
-"Manufacturing PPPs", "importing": "Importing PPPs", "processing": "Processing
-PPPs", "selling": "Selling PPPs", "distributing": "Distributing PPPs",
-"storing-only": "Only storing PPPs for other businesses" } %} {# Which
-storage-address field each main sector maps to, for the nested subsector bullets
-#} {% set subsectorMap = { "Agriculture": data["agri-subsector"],
-"Horticulture": data["horti-subsector"], "Amenity": data["amenity-subsector"] }
-%} {% set storingWhereLabel = { "Main business address": "At the main business
-address", "A different location to the main business address": "At a different
-location" } %} {# Render one or many coded values as their labels, one per line
-#} {% macro labelled(value, labels) %} {%- if value -%} {%- if value is string
--%}{{ labels[value] or value }} {%- else -%}{% for v in value %}{{ labels[v] or
-v }}{% if not loop.last %}<br />{% endif %}{% endfor %} {%- endif -%} {%- endif
--%} {% endmacro %} {% block content %}
+"Check your details" %} {# Back to the last activity's final page (manufacturing
+runs to its own quantity band) #} {% set backLink = (basePath +
+"/manufacture-quantity") if (data.activities and "manufacturing" in
+data.activities) else (basePath + "/quantity") %} {% set activityLabels = {
+"using": "Using PPPs as part of your work", "manufacturing": "Manufacturing
+PPPs", "importing": "Importing PPPs", "processing": "Processing PPPs",
+"selling": "Selling PPPs", "distributing": "Distributing PPPs", "storing-only":
+"Only storing PPPs for other businesses" } %} {# Which field holds the
+subsectors for each main sector, for the nested bullets #} {% set subsectorMap =
+{ "Agriculture": data["agri-subsector"], "Horticulture":
+data["horti-subsector"], "Amenity": data["amenity-subsector"] } %} {% set
+storingWhereLabel = { "Main business address": "At the main business address",
+"A different location to the main business address": "At a different location" }
+%} {# Render one or many coded values as their labels, one per line #} {% macro
+labelled(value, labels) %} {%- if value -%} {%- if value is string -%}{{
+labels[value] or value }} {%- else -%}{% for v in value %}{{ labels[v] or v }}{%
+if not loop.last %}<br />{% endif %}{% endfor %} {%- endif -%} {%- endif -%} {%
+endmacro %} {% block content %}
 <div class="govuk-grid-row">
   <div class="govuk-grid-column-two-thirds">
     <h1 class="govuk-heading-xl">Check your details</h1>
@@ -51,20 +54,21 @@ v }}{% if not loop.last %}<br />{% endif %}{% endfor %} {%- endif -%} {%- endif
     visuallyHiddenText: "contact email" }] } }, { key: { text: "Contact
     telephone" }, value: { text: data["contact-telephone"] }, actions: { items:
     [{ href: basePath + "/contact-details?returnTo=check-answers", text:
-    "Change", visuallyHiddenText: "contact telephone" }] } } ] }) }}
-
+    "Change", visuallyHiddenText: "contact telephone" }] } } ] }) }} {# ----
+    Using PPPs section ---- #} {% if data.activities and "using" in
+    data.activities %}
     <h2 class="govuk-heading-m">PPP activity details</h2>
 
-    {# Composed values for the conditional rows #} {% set thirdPartyHtml %}{{
-    data["third-party-name"] }}<br />{{ data["third-party-line-1"] }}{% if
-    data["third-party-line-2"] %}<br />{{ data["third-party-line-2"] }}{% endif
-    %}<br />{{ data["third-party-town"] }}<br />{{ data["third-party-postcode"]
-    }}<br />{{ data["third-party-country"] }}{% endset %} {# Main sector of
-    work: each main sector on its own line with its subsectors as bullets
-    beneath #} {% set sectorHtml %} {%- set sectors = [data.sector] if
-    data.sector is string else (data.sector or []) -%} {%- for s in sectors -%}
-    {{ s }} {%- set subs = subsectorMap[s] -%} {%- if subs -%} {%- set subsList
-    = [subs] if subs is string else subs -%}
+    {% set thirdPartyHtml %}{{ data["third-party-name"] }}<br />{{
+    data["third-party-line-1"] }}{% if data["third-party-line-2"] %}<br />{{
+    data["third-party-line-2"] }}{% endif %}<br />{{ data["third-party-town"]
+    }}<br />{{ data["third-party-postcode"] }}<br />{{
+    data["third-party-country"] }}{% endset %} {# Main sector of work: each main
+    sector on its own line with its subsectors as bullets beneath #} {% set
+    sectorHtml %} {%- set sectors = [data.sector] if data.sector is string else
+    (data.sector or []) -%} {%- for s in sectors -%} {{ s }} {%- set subs =
+    subsectorMap[s] -%} {%- if subs -%} {%- set subsList = [subs] if subs is
+    string else subs -%}
     <ul class="govuk-list govuk-list--bullet govuk-!-margin-top-1">
       {% for sub in subsList %}
       <li>{{ sub }}</li>
@@ -130,7 +134,26 @@ v }}{% if not loop.last %}<br />{% endif %}{% endfor %} {%- endif -%} {%- endif
     year" }, value: { text: data["quantity"] }, actions: { items: [{ href:
     basePath + "/quantity?returnTo=check-answers", text: "Change",
     visuallyHiddenText: "quantity of PPPs or adjuvants" }] } }), pppRows) %} {{
-    govukSummaryList({ rows: pppRows }) }}
+    govukSummaryList({ rows: pppRows }) }} {% endif %} {# ---- Manufacturing
+    PPPs section ---- #} {% if data.activities and "manufacturing" in
+    data.activities %}
+    <h2 class="govuk-heading-m">PPP activity details</h2>
+
+    {% set manufactureQuantityText %}{% if data["manufacture-quantity"] %}{{
+    data["manufacture-quantity"] }} Kgs/litres{% endif %}{% endset %} {{
+    govukSummaryList({ rows: [ { key: { text: "What products do you
+    manufacture?" }, value: { text: data["manufacture-products"] }, actions: {
+    items: [{ href: basePath + "/manufacture-products?returnTo=check-answers",
+    text: "Change", visuallyHiddenText: "what products you manufacture" }] } },
+    { key: { text: "How many manufacturing sites?" }, value: { text:
+    data["manufacture-sites"] }, actions: { items: [{ href: basePath +
+    "/manufacture-sites?returnTo=check-answers", text: "Change",
+    visuallyHiddenText: "how many manufacturing sites" }] } }, { key: { text:
+    "Volume of PPPs and ingredients or adjuvants manufactured in the last year"
+    }, value: { text: manufactureQuantityText | trim }, actions: { items: [{
+    href: basePath + "/manufacture-quantity?returnTo=check-answers", text:
+    "Change", visuallyHiddenText: "volume manufactured in the last year" }] } }
+    ] }) }} {% endif %}
 
     <form method="post" action="{{ basePath }}/check-answers" novalidate>
       {{ govukButton({ text: "Continue" }) }}

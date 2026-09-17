@@ -40,6 +40,22 @@ const sectorChainNext = (afterPage, sectors) => {
   return steps[steps.indexOf(afterPage) + 1]
 }
 
+// Entry page for each activity's sub-flow. The common route (activities →
+// business name → address → contact) hands off to the FIRST selected activity's
+// entry; each sub-flow currently ends at check-answers. As more activities land
+// they'll be chained in selection order. Activities without a built flow yet are
+// skipped over. selling-only is handled separately (business-name → /sell).
+const activityEntry = {
+  using: 'who-applies',
+  manufacturing: 'manufacture-products'
+}
+const firstActivityEntry = (activities) => {
+  for (const a of activities) {
+    if (activityEntry[a]) return activityEntry[a]
+  }
+  return 'check-answers'
+}
+
 module.exports = (router) => {
   // Bare version root → the version's start page. Without this, /v1-2 has no
   // matching view and hits the Prototype Kit's (broken) built-in 404 page.
@@ -202,10 +218,11 @@ module.exports = (router) => {
     if (!v.ok) return res.render(view('contact-details'), v)
     const back = consumeReturnTo(req)
     if (back) return res.redirect(P + '/' + back)
-    // TODO: → the FIRST selected activity's flow via the ordered-traversal
-    // dispatcher (built once all 7 journeys exist). For now → the Using journey
-    // entry so it's walkable while we build it.
-    res.redirect(P + '/who-applies')
+    // Hand off to the first selected activity's sub-flow. Ordered chaining across
+    // multiple activities is added as the remaining flows land.
+    res.redirect(
+      P + '/' + firstActivityEntry(toArray(req.session.data.activities))
+    )
   })
 
   // --- Using PPPs journey (Figma 1.3) -------------------------------------
@@ -520,6 +537,51 @@ module.exports = (router) => {
     const back = consumeReturnTo(req)
     if (back) return res.redirect(P + '/' + back)
     res.redirect(P + '/store-sites')
+  })
+
+  // --- Manufacturing PPPs journey (Figma 1.3) -----------------------------
+  // products → number of sites → quantity band → check-answers.
+
+  router.post(P + '/manufacture-products', (req, res) => {
+    const v = validate([
+      {
+        field: 'manufacture-products',
+        message: 'Select what products you manufacture',
+        valid: filled(req.session.data['manufacture-products'])
+      }
+    ])
+    if (!v.ok) return res.render(view('manufacture-products'), v)
+    const back = consumeReturnTo(req)
+    if (back) return res.redirect(P + '/' + back)
+    res.redirect(P + '/manufacture-sites')
+  })
+
+  router.post(P + '/manufacture-sites', (req, res) => {
+    const v = validate([
+      {
+        field: 'manufacture-sites',
+        message: 'Select the number of sites you are responsible for',
+        valid: filled(req.session.data['manufacture-sites'])
+      }
+    ])
+    if (!v.ok) return res.render(view('manufacture-sites'), v)
+    const back = consumeReturnTo(req)
+    if (back) return res.redirect(P + '/' + back)
+    res.redirect(P + '/manufacture-quantity')
+  })
+
+  router.post(P + '/manufacture-quantity', (req, res) => {
+    const v = validate([
+      {
+        field: 'manufacture-quantity',
+        message: 'Enter the estimated annual quantity',
+        valid: filled(req.session.data['manufacture-quantity'])
+      }
+    ])
+    if (!v.ok) return res.render(view('manufacture-quantity'), v)
+    const back = consumeReturnTo(req)
+    if (back) return res.redirect(P + '/' + back)
+    res.redirect(P + '/check-answers')
   })
 
   // --- Additional addresses branch ---
