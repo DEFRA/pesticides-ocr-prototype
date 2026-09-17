@@ -7,19 +7,21 @@ computed in the /check-answers GET route — the formatter reflows {% set %}
 blocks like prose and would break in-template string comparisons and multi-word
 map keys. #} {% set backLink = (basePath + "/import-quantity") if
 (data.activities and "importing" in data.activities) else ((basePath +
-"/manufacture-quantity") if (data.activities and "manufacturing" in
-data.activities) else (basePath + "/quantity")) %} {% set activityLabels = {
-"using": "Using PPPs as part of your work", "manufacturing": "Manufacturing
-PPPs", "importing": "Import PPPs", "processing": "Processing PPPs", "selling":
-"Selling PPPs", "distributing": "Distributing PPPs", "storing-only": "Only
-storing PPPs for other businesses" } %} {# Which field holds the subsectors for
-each main sector, for the nested bullets #} {% set subsectorMap = {
-"Agriculture": data["agri-subsector"], "Horticulture": data["horti-subsector"],
-"Amenity": data["amenity-subsector"] } %} {# Render one or many coded values as
-their labels, one per line #} {% macro labelled(value, labels) %} {%- if value
--%} {%- if value is string -%}{{ labels[value] or value }} {%- else -%}{% for v
-in value %}{{ labels[v] or v }}{% if not loop.last %}<br />{% endif %}{% endfor
-%} {%- endif -%} {%- endif -%} {% endmacro %} {% block content %}
+"/process-quantity") if (data.activities and "processing" in data.activities)
+else ((basePath + "/manufacture-quantity") if (data.activities and
+"manufacturing" in data.activities) else (basePath + "/quantity"))) %} {% set
+activityLabels = { "using": "Using PPPs as part of your work", "manufacturing":
+"Manufacturing PPPs", "importing": "Import PPPs", "processing": "Processing
+PPPs", "selling": "Selling PPPs", "distributing": "Distributing PPPs",
+"storing-only": "Only storing PPPs for other businesses" } %} {# Which field
+holds the subsectors for each main sector, for the nested bullets #} {% set
+subsectorMap = { "Agriculture": data["agri-subsector"], "Horticulture":
+data["horti-subsector"], "Amenity": data["amenity-subsector"] } %} {# Render one
+or many coded values as their labels, one per line #} {% macro labelled(value,
+labels) %} {%- if value -%} {%- if value is string -%}{{ labels[value] or value
+}} {%- else -%}{% for v in value %}{{ labels[v] or v }}{% if not loop.last %}<br />{%
+endif %}{% endfor %} {%- endif -%} {%- endif -%} {% endmacro %} {% block content
+%}
 <div class="govuk-grid-row">
   <div class="govuk-grid-column-two-thirds">
     <h1 class="govuk-heading-xl">Check your details</h1>
@@ -191,7 +193,25 @@ in value %}{{ labels[v] or v }}{% if not loop.last %}<br />{% endif %}{% endfor
     actions: { items: [{ href: basePath +
     "/import-quantity?returnTo=check-answers", text: "Change",
     visuallyHiddenText: "volume imported in the last year" }] } }), importRows)
-    %} {{ govukSummaryList({ rows: importRows }) }} {% endif %}
+    %} {{ govukSummaryList({ rows: importRows }) }} {% endif %} {# ----
+    Processing PPPs section ---- #} {% if data.activities and "processing" in
+    data.activities %}
+    <h2 class="govuk-heading-m">PPP activity details</h2>
+
+    {% set processQuantityText %}{% if data["process-quantity"] %}{{
+    data["process-quantity"] }} Kgs/litres{% endif %}{% endset %} {{
+    govukSummaryList({ rows: [ { key: { text: "What products do you process?" },
+    value: { text: data["process-products"] }, actions: { items: [{ href:
+    basePath + "/process-products?returnTo=check-answers", text: "Change",
+    visuallyHiddenText: "what products you process" }] } }, { key: { text: "How
+    many processing sites?" }, value: { text: data["process-sites"] }, actions:
+    { items: [{ href: basePath + "/process-sites?returnTo=check-answers", text:
+    "Change", visuallyHiddenText: "how many processing sites" }] } }, { key: {
+    text: "Volume of PPPs and ingredients or adjuvants processed in the last
+    year" }, value: { text: processQuantityText | trim }, actions: { items: [{
+    href: basePath + "/process-quantity?returnTo=check-answers", text: "Change",
+    visuallyHiddenText: "volume processed in the last year" }] } } ] }) }} {%
+    endif %}
 
     <form method="post" action="{{ basePath }}/check-answers" novalidate>
       {{ govukButton({ text: "Continue" }) }}

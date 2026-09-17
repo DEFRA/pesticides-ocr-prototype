@@ -48,7 +48,8 @@ const sectorChainNext = (afterPage, sectors) => {
 const activityEntry = {
   using: 'who-applies',
   manufacturing: 'manufacture-products',
-  importing: 'import-products'
+  importing: 'import-products',
+  processing: 'process-products'
 }
 const firstActivityEntry = (activities) => {
   for (const a of activities) {
@@ -580,6 +581,51 @@ module.exports = (router) => {
       }
     ])
     if (!v.ok) return res.render(view('manufacture-quantity'), v)
+    const back = consumeReturnTo(req)
+    if (back) return res.redirect(P + '/' + back)
+    res.redirect(P + '/check-answers')
+  })
+
+  // --- Processing PPPs journey (Figma 1.3) --------------------------------
+  // products → number of sites → free-text annual volume → check-answers.
+
+  router.post(P + '/process-products', (req, res) => {
+    const v = validate([
+      {
+        field: 'process-products',
+        message: 'Select what products you process',
+        valid: filled(req.session.data['process-products'])
+      }
+    ])
+    if (!v.ok) return res.render(view('process-products'), v)
+    const back = consumeReturnTo(req)
+    if (back) return res.redirect(P + '/' + back)
+    res.redirect(P + '/process-sites')
+  })
+
+  router.post(P + '/process-sites', (req, res) => {
+    const v = validate([
+      {
+        field: 'process-sites',
+        message: 'Select the number of sites you are responsible for',
+        valid: filled(req.session.data['process-sites'])
+      }
+    ])
+    if (!v.ok) return res.render(view('process-sites'), v)
+    const back = consumeReturnTo(req)
+    if (back) return res.redirect(P + '/' + back)
+    res.redirect(P + '/process-quantity')
+  })
+
+  router.post(P + '/process-quantity', (req, res) => {
+    const v = validate([
+      {
+        field: 'process-quantity',
+        message: 'Enter the estimated annual quantity',
+        valid: filled(req.session.data['process-quantity'])
+      }
+    ])
+    if (!v.ok) return res.render(view('process-quantity'), v)
     const back = consumeReturnTo(req)
     if (back) return res.redirect(P + '/' + back)
     res.redirect(P + '/check-answers')
