@@ -1,0 +1,38 @@
+{% extends "layouts/main.html" %} {% set basePath = "/v1-3" %} {% from
+"govuk/components/button/macro.njk" import govukButton %} {% set pageName = "You
+do not need to register" %} {% set backLink = basePath + "/activities" %} {%
+block content %}
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+    <h1 class="govuk-heading-xl">You do not need to register</h1>
+
+    <p class="govuk-body">
+      This service is for organisations and people carrying out professional PPP
+      activities.
+    </p>
+
+    <p class="govuk-body">
+      You do not need to register if you only use products such as weedkillers,
+      slug pellets or garden sprays in your own home or garden.
+    </p>
+
+    <h2 class="govuk-heading-s">More information</h2>
+    <ul class="govuk-list govuk-list--bullet">
+      <li>
+        <a class="govuk-link" href="#"
+          >Guidance on using pesticides safely in your home or garden</a
+        >
+      </li>
+      <li>
+        <a class="govuk-link" href="#"
+          >Search the database of authorised amateur garden products</a
+        >
+      </li>
+    </ul>
+
+    {# Continue leads to the same next page (page 3) as the business-activities
+    Continue. Kept in sync with the /activities route target. #} {{
+    govukButton({ text: "Continue", href: basePath + "/business-name" }) }}
+  </div>
+</div>
+{% endblock %}

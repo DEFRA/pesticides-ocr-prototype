@@ -1,0 +1,24 @@
+{% extends "layouts/main.html" %} {% set basePath = "/v1-3" %} {% from
+"govuk/components/input/macro.njk" import govukInput %} {% from
+"govuk/components/button/macro.njk" import govukButton %} {% from
+"govuk/components/error-summary/macro.njk" import govukErrorSummary %} {% set
+pageName = "What is your business or organisation name?" %} {% set backLink =
+basePath + "/activities" %} {% block content %}
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+    {% if errorList %}{{ govukErrorSummary({ titleText: "There is a problem",
+    errorList: errorList }) }}{% endif %}
+
+    <h1 class="govuk-heading-xl">
+      What is your business or organisation name?
+    </h1>
+
+    <form method="post" action="{{ basePath }}/business-name" novalidate>
+      {{ govukInput({ label: { text: "Enter your business or organisation name"
+      }, id: "business-name", name: "business-name", errorMessage: { text:
+      errors["business-name"] } if errors["business-name"], value:
+      data["business-name"] }) }} {{ govukButton({ text: "Continue" }) }}
+    </form>
+  </div>
+</div>
+{% endblock %}

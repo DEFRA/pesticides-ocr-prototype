@@ -1,0 +1,33 @@
+{% extends "layouts/main.html" %} {% set basePath = "/v1-3" %} {% from
+"govuk/components/input/macro.njk" import govukInput %} {% from
+"govuk/components/button/macro.njk" import govukButton %} {% from
+"govuk/components/error-summary/macro.njk" import govukErrorSummary %} {% set
+pageName = "What is the overall volume of PPPs, ingredients and adjuvants your
+business manufactures in a typical year?" %} {% set backLink = basePath +
+"/manufacture-sites" %} {% block content %}
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+    {% if errorList %}{{ govukErrorSummary({ titleText: "There is a problem",
+    errorList: errorList }) }}{% endif %}
+
+    <h1 class="govuk-heading-xl">
+      What is the overall volume of PPPs, ingredients and adjuvants your
+      business manufactures in a typical year?
+    </h1>
+    <p class="govuk-body">
+      Give an estimate of the total amount of undiluted product you manufacture.
+      If you manufacture both liquid and solid products, combine them using 1
+      litre as roughly equal to 1 kilogram.
+    </p>
+
+    <form method="post" action="{{ basePath }}/manufacture-quantity" novalidate>
+      {{ govukInput({ label: { text: "Estimated annual quantity" }, id:
+      "manufacture-quantity", name: "manufacture-quantity", classes:
+      "govuk-input--width-10", suffix: { text: "Kilograms or litres" },
+      errorMessage: { text: errors["manufacture-quantity"] } if
+      errors["manufacture-quantity"], value: data["manufacture-quantity"] }) }}
+      {{ govukButton({ text: "Continue" }) }}
+    </form>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,28 @@
+{% extends "layouts/main.html" %} {% set basePath = "/v1-3" %} {% from
+"govuk/components/button/macro.njk" import govukButton %} {% set pageName =
+"What is the location where you store PPPs?" %} {% set backLink = basePath +
+"/import-storing-where" %} {% block content %}
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+    <h1 class="govuk-heading-xl">What is the location where you store PPPs?</h1>
+
+    <form
+      method="post"
+      action="{{ basePath }}/import-store-own-address-lookup"
+      novalidate
+    >
+      <div class="govuk-button-group">
+        {{ govukButton({ text: "Find an address" }) }}
+        <span class="govuk-body"
+          >or
+          <a
+            class="govuk-link"
+            href="{{ basePath }}/import-store-own-address-manual"
+            >enter an address manually</a
+          ></span
+        >
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

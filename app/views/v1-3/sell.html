@@ -1,0 +1,31 @@
+{% extends "layouts/main.html" %} {% set basePath = "/v1-3" %} {% from
+"govuk/components/radios/macro.njk" import govukRadios %} {% from
+"govuk/components/button/macro.njk" import govukButton %} {% from
+"govuk/components/error-summary/macro.njk" import govukErrorSummary %} {% set
+pageName = "Are the PPPs your business sells mostly professional use or amateur
+use?" %} {# Selling-only (the single-select string case) skips the common
+address/contact pages #} {% set sellingOnly = (data.activities == "selling") or
+(data.activities and data.activities[0] == "selling" and data.activities.length
+== 1) %} {# Entered from business-name (selling only) or contact-details
+(selling with other activities) #} {% set backLink = entryBackLink or ((basePath
++ "/business-name") if sellingOnly else (basePath + "/contact-details")) %} {%
+block content %}
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+    {% if errorList %}{{ govukErrorSummary({ titleText: "There is a problem",
+    errorList: errorList }) }}{% endif %}
+
+    <form method="post" action="{{ basePath }}/sell" novalidate>
+      {{ govukRadios({ name: "sell-use-type", errorMessage: { text:
+      errors["sell-use-type"] } if errors["sell-use-type"], fieldset: { legend:
+      { text: "Are the PPPs your business sells mostly professional use or
+      amateur use?", isPageHeading: true, classes: "govuk-fieldset__legend--l" }
+      }, items: [ { value: "Mostly professional use", text: "Mostly professional
+      use", checked: checked("sell-use-type", "Mostly professional use") }, {
+      value: "Mostly amateur use", text: "Mostly amateur use", checked:
+      checked("sell-use-type", "Mostly amateur use") } ] }) }} {{ govukButton({
+      text: "Continue" }) }}
+    </form>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,31 @@
+{% extends "layouts/main.html" %} {% set basePath = "/v1-3" %} {% from
+"govuk/components/radios/macro.njk" import govukRadios %} {% from
+"govuk/components/button/macro.njk" import govukButton %} {% from
+"govuk/components/error-summary/macro.njk" import govukErrorSummary %} {% set
+pageName = "What quantity of PPPs or adjuvants do you use in a typical year?" %}
+{% set backLink = basePath + "/store-applied" %} {% block content %}
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+    {% if errorList %}{{ govukErrorSummary({ titleText: "There is a problem",
+    errorList: errorList }) }}{% endif %}
+
+    <form method="post" action="{{ basePath }}/quantity" novalidate>
+      {{ govukRadios({ name: "quantity", errorMessage: { text:
+      errors["quantity"] } if errors["quantity"], fieldset: { legend: { text:
+      "What quantity of PPPs or adjuvants do you use in a typical year?",
+      isPageHeading: true, classes: "govuk-fieldset__legend--l" } }, hint: {
+      text: "Estimate the total amount of undiluted product used in a typical
+      year. If you use both liquid and solid products, use 1 litre as roughly
+      equivalent to 1 kilogram. Select the range that best matches the total
+      amount in litres or kilograms." }, items: [ { value: "1 to 29", text: "1
+      to 29", checked: checked("quantity", "1 to 29") }, { value: "30 to 59",
+      text: "30 to 59", checked: checked("quantity", "30 to 59") }, { value: "60
+      to 149", text: "60 to 149", checked: checked("quantity", "60 to 149") }, {
+      value: "150 to 399", text: "150 to 399", checked: checked("quantity", "150
+      to 399") }, { value: "400 and over", text: "400 and over", checked:
+      checked("quantity", "400 and over") } ] }) }} {{ govukButton({ text:
+      "Continue" }) }}
+    </form>
+  </div>
+</div>
+{% endblock %}

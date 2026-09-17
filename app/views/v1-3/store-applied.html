@@ -1,0 +1,27 @@
+{% extends "layouts/main.html" %} {% set basePath = "/v1-3" %} {% from
+"govuk/components/radios/macro.njk" import govukRadios %} {% from
+"govuk/components/button/macro.njk" import govukButton %} {% from
+"govuk/components/error-summary/macro.njk" import govukErrorSummary %} {% set
+pageName = "Do you store products you apply?" %} {% set backLink = basePath +
+"/sector" %} {% block content %}
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+    {% if errorList %}{{ govukErrorSummary({ titleText: "There is a problem",
+    errorList: errorList }) }}{% endif %}
+
+    <form method="post" action="{{ basePath }}/store-applied" novalidate>
+      {{ govukRadios({ name: "store-applied", errorMessage: { text:
+      errors["store-applied"] } if errors["store-applied"], fieldset: { legend:
+      { text: "Do you store products you apply?", isPageHeading: true, classes:
+      "govuk-fieldset__legend--l" } }, hint: { text: "Select an option" },
+      items: [ { value: "Yes, at sites we own", text: "Yes, at sites we own",
+      checked: checked("store-applied", "Yes, at sites we own") }, { value:
+      "Yes, a third party stores them for us", text: "Yes, a third party stores
+      them for us", checked: checked("store-applied", "Yes, a third party stores
+      them for us") }, { value: "No, we don't store PPPs", text: "No, we don't
+      store PPPs", checked: checked("store-applied", "No, we don't store PPPs")
+      } ] }) }} {{ govukButton({ text: "Continue" }) }}
+    </form>
+  </div>
+</div>
+{% endblock %}

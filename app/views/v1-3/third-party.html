@@ -1,0 +1,49 @@
+{% extends "layouts/main.html" %} {% set basePath = "/v1-3" %} {% from
+"govuk/components/input/macro.njk" import govukInput %} {% from
+"govuk/components/radios/macro.njk" import govukRadios %} {% from
+"govuk/components/button/macro.njk" import govukButton %} {% from
+"govuk/components/error-summary/macro.njk" import govukErrorSummary %} {% set
+pageName = "Who applies PPPs on your behalf?" %} {% set backLink = basePath +
+"/who-applies" %} {% block content %}
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+    {% if errorList %}{{ govukErrorSummary({ titleText: "There is a problem",
+    errorList: errorList }) }}{% endif %}
+
+    <h1 class="govuk-heading-xl">Who applies PPPs on your behalf?</h1>
+    <p class="govuk-body">
+      Provide details of third parties that apply PPPs on your behalf, for
+      example contract sprayers.
+    </p>
+
+    <form method="post" action="{{ basePath }}/third-party" novalidate>
+      {{ govukInput({ label: { text: "Business or company name" }, id:
+      "third-party-name", name: "third-party-name", errorMessage: { text:
+      errors["third-party-name"] } if errors["third-party-name"], value:
+      data["third-party-name"] }) }} {{ govukInput({ label: { text: "Address
+      line 1" }, id: "third-party-line-1", name: "third-party-line-1",
+      autocomplete: "address-line1", errorMessage: { text:
+      errors["third-party-line-1"] } if errors["third-party-line-1"], value:
+      data["third-party-line-1"] }) }} {{ govukInput({ label: { text: "Address
+      line 2 (optional)" }, id: "third-party-line-2", name:
+      "third-party-line-2", autocomplete: "address-line2", value:
+      data["third-party-line-2"] }) }} {{ govukInput({ label: { text: "Town or
+      city" }, id: "third-party-town", name: "third-party-town", classes:
+      "govuk-!-width-two-thirds", autocomplete: "address-level2", errorMessage:
+      { text: errors["third-party-town"] } if errors["third-party-town"], value:
+      data["third-party-town"] }) }} {{ govukInput({ label: { text: "Postcode"
+      }, id: "third-party-postcode", name: "third-party-postcode", classes:
+      "govuk-input--width-10", autocomplete: "postal-code", errorMessage: {
+      text: errors["third-party-postcode"] } if errors["third-party-postcode"],
+      value: data["third-party-postcode"] }) }} {{ govukRadios({ name:
+      "third-party-country", errorMessage: { text: errors["third-party-country"]
+      } if errors["third-party-country"], fieldset: { legend: { text: "Country"
+      } }, items: [ { value: "England", text: "England", checked:
+      checked("third-party-country", "England") }, { value: "Scotland", text:
+      "Scotland", checked: checked("third-party-country", "Scotland") }, {
+      value: "Wales", text: "Wales", checked: checked("third-party-country",
+      "Wales") } ] }) }} {{ govukButton({ text: "Continue" }) }}
+    </form>
+  </div>
+</div>
+{% endblock %}

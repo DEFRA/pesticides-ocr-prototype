@@ -1,0 +1,38 @@
+{% extends "layouts/main.html" %} {% set basePath = "/v1-3" %} {% from
+"govuk/components/input/macro.njk" import govukInput %} {% from
+"govuk/components/button/macro.njk" import govukButton %} {% from
+"govuk/components/error-summary/macro.njk" import govukErrorSummary %} {% set
+pageName = "What is the main address for your business or organisation?" %} {%
+set backLink = basePath + "/business-name" %} {% block content %}
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+    {% if errorList %}{{ govukErrorSummary({ titleText: "There is a problem",
+    errorList: errorList }) }}{% endif %}
+
+    <h1 class="govuk-heading-xl">
+      What is the main address for your business or organisation?
+    </h1>
+
+    <form method="post" action="{{ basePath }}/address-lookup" novalidate>
+      {{ govukInput({ label: { text: "Postcode" }, hint: { text: "For example
+      AA3 1AB" }, id: "lookup-postcode", name: "lookup-postcode", classes:
+      "govuk-input--width-10", autocomplete: "postal-code", errorMessage: {
+      text: errors["lookup-postcode"] } if errors["lookup-postcode"], value:
+      data["lookup-postcode"] }) }} {{ govukInput({ label: { text: "Building
+      name or number (optional)" }, hint: { text: "For example, 15 or Prospect
+      Cottage" }, id: "lookup-building", name: "lookup-building", value:
+      data["lookup-building"] }) }}
+
+      <div class="govuk-button-group">
+        {{ govukButton({ text: "Find an address" }) }}
+        <span class="govuk-body"
+          >or
+          <a class="govuk-link" href="{{ basePath }}/main-address"
+            >enter an address manually</a
+          ></span
+        >
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

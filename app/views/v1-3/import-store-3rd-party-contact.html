@@ -1,0 +1,43 @@
+{% extends "layouts/main.html" %} {% set basePath = "/v1-3" %} {% from
+"govuk/components/input/macro.njk" import govukInput %} {% from
+"govuk/components/button/macro.njk" import govukButton %} {% from
+"govuk/components/error-summary/macro.njk" import govukErrorSummary %} {% set
+pageName = "Who stores PPPs on your behalf?" %} {% set backLink = basePath +
+"/import-storing" %} {% block content %}
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+    {% if errorList %}{{ govukErrorSummary({ titleText: "There is a problem",
+    errorList: errorList }) }}{% endif %}
+
+    <h1 class="govuk-heading-xl">Who stores PPPs on your behalf?</h1>
+    <p class="govuk-body">
+      We may need to contact someone about your organisation’s PPP storage. This
+      should be a person with knowledge of these activities.
+    </p>
+
+    <form
+      method="post"
+      action="{{ basePath }}/import-store-3rd-party-contact"
+      novalidate
+    >
+      {{ govukInput({ label: { text: "Contact name" }, id:
+      "import-store-3p-name", name: "import-store-3p-name", autocomplete:
+      "name", errorMessage: { text: errors["import-store-3p-name"] } if
+      errors["import-store-3p-name"], value: data["import-store-3p-name"] }) }}
+      {{ govukInput({ label: { text: "Job title or role (optional)" }, id:
+      "import-store-3p-job-title", name: "import-store-3p-job-title", value:
+      data["import-store-3p-job-title"] }) }} {{ govukInput({ label: { text:
+      "Telephone number" }, id: "import-store-3p-telephone", name:
+      "import-store-3p-telephone", type: "tel", autocomplete: "tel",
+      errorMessage: { text: errors["import-store-3p-telephone"] } if
+      errors["import-store-3p-telephone"], value:
+      data["import-store-3p-telephone"] }) }} {{ govukInput({ label: { text:
+      "Email address" }, id: "import-store-3p-email", name:
+      "import-store-3p-email", type: "email", autocomplete: "email",
+      errorMessage: { text: errors["import-store-3p-email"] } if
+      errors["import-store-3p-email"], value: data["import-store-3p-email"] })
+      }} {{ govukButton({ text: "Continue" }) }}
+    </form>
+  </div>
+</div>
+{% endblock %}

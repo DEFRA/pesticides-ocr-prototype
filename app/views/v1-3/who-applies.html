@@ -1,0 +1,27 @@
+{% extends "layouts/main.html" %} {% set basePath = "/v1-3" %} {% from
+"govuk/components/radios/macro.njk" import govukRadios %} {% from
+"govuk/components/button/macro.njk" import govukButton %} {% from
+"govuk/components/error-summary/macro.njk" import govukErrorSummary %} {% set
+pageName = "Who applies PPPs for your organisation?" %} {% set backLink =
+entryBackLink or (basePath + "/contact-details") %} {% block content %}
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+    {% if errorList %}{{ govukErrorSummary({ titleText: "There is a problem",
+    errorList: errorList }) }}{% endif %}
+
+    <form method="post" action="{{ basePath }}/who-applies" novalidate>
+      {{ govukRadios({ name: "who-applies", errorMessage: { text:
+      errors["who-applies"] } if errors["who-applies"], fieldset: { legend: {
+      text: "Who applies PPPs for your organisation?", isPageHeading: true,
+      classes: "govuk-fieldset__legend--l" } }, hint: { text: "Select all that
+      apply" }, items: [ { value: "We apply PPPs ourselves or on behalf of other
+      organisations", text: "We apply PPPs ourselves or on behalf of other
+      organisations", checked: checked("who-applies", "We apply PPPs ourselves
+      or on behalf of other organisations") }, { value: "Another organisation
+      applies PPPs on our behalf", text: "Another organisation applies PPPs on
+      our behalf", checked: checked("who-applies", "Another organisation applies
+      PPPs on our behalf") } ] }) }} {{ govukButton({ text: "Continue" }) }}
+    </form>
+  </div>
+</div>
+{% endblock %}

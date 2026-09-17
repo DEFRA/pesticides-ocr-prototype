@@ -1,0 +1,39 @@
+{% extends "layouts/main.html" %} {% set basePath = "/v1-3" %} {% from
+"govuk/components/checkboxes/macro.njk" import govukCheckboxes %} {% from
+"govuk/components/button/macro.njk" import govukButton %} {% from
+"govuk/components/error-summary/macro.njk" import govukErrorSummary %} {% set
+pageName = "Which activities does your organisation carry out?" %} {% set
+backLink = basePath + "/start" %} {% block content %}
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+    {% if errorList %}{{ govukErrorSummary({ titleText: "There is a problem",
+    errorList: errorList }) }}{% endif %}
+
+    <form method="post" action="{{ basePath }}/activities" novalidate>
+      {{ govukCheckboxes({ name: "activities", errorMessage: { text:
+      errors["activities"] } if errors["activities"], fieldset: { legend: {
+      text: "Which activities does your organisation carry out?", isPageHeading:
+      true, classes: "govuk-fieldset__legend--l" } }, hint: { html: "These
+      activities must be carried out in Great Britain (England, Scotland or
+      Wales).<br /><br />Select all that apply." }, items: [ { value: "using",
+      text: "Using PPPs as part of your work", checked: checked("activities",
+      "using") }, { value: "manufacturing", text: "Manufacturing PPPs", checked:
+      checked("activities", "manufacturing") }, { value: "importing", text:
+      "Importing PPPs", checked: checked("activities", "importing") }, { value:
+      "processing", text: "Processing PPPs", checked: checked("activities",
+      "processing") }, { value: "selling", text: "Selling PPPs", checked:
+      checked("activities", "selling") }, { value: "distributing", text:
+      "Distributing PPPs", checked: checked("activities", "distributing") }, {
+      divider: "or" }, { value: "storing-only", text: "Only storing PPPs for
+      other businesses", behaviour: "exclusive", checked: checked("activities",
+      "storing-only") } ] }) }} {{ govukButton({ text: "Continue" }) }}
+    </form>
+
+    <p class="govuk-body">
+      <a class="govuk-link" href="{{ basePath }}/not-eligible"
+        >I only use plant protection products (PPPs) in my own home or garden</a
+      >
+    </p>
+  </div>
+</div>
+{% endblock %}

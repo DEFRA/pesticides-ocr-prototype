@@ -1,0 +1,27 @@
+{% extends "layouts/main.html" %} {% set basePath = "/v1-3" %} {% from
+"govuk/components/radios/macro.njk" import govukRadios %} {% from
+"govuk/components/button/macro.njk" import govukButton %} {% from
+"govuk/components/error-summary/macro.njk" import govukErrorSummary %} {% set
+pageName = "Where do you store products you apply?" %} {% set backLink =
+basePath + "/store-applied" %} {% block content %}
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+    {% if errorList %}{{ govukErrorSummary({ titleText: "There is a problem",
+    errorList: errorList }) }}{% endif %}
+
+    <form method="post" action="{{ basePath }}/storing-where" novalidate>
+      {{ govukRadios({ name: "storing-where", errorMessage: { text:
+      errors["storing-where"] } if errors["storing-where"], fieldset: { legend:
+      { text: "Where do you store products you apply?", isPageHeading: true,
+      classes: "govuk-fieldset__legend--l" } }, hint: { text: "Select an option"
+      }, items: [ { value: "Main business address", text: "At " +
+      (data["address-line-1"] or "main business address"), checked:
+      checked("storing-where", "Main business address") }, { value: "A different
+      location to the main business address", text: "A different location to the
+      main business address", checked: checked("storing-where", "A different
+      location to the main business address") } ] }) }} {{ govukButton({ text:
+      "Continue" }) }}
+    </form>
+  </div>
+</div>
+{% endblock %}

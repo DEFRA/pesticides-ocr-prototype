@@ -1,0 +1,40 @@
+{% extends "layouts/main.html" %} {% set basePath = "/v1-3" %} {% from
+"govuk/components/input/macro.njk" import govukInput %} {% from
+"govuk/components/button/macro.njk" import govukButton %} {% from
+"govuk/components/error-summary/macro.njk" import govukErrorSummary %} {% set
+pageName = "What is the location where you store PPPs?" %} {% set backLink =
+basePath + "/storing-where" %} {% block content %}
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+    {% if errorList %}{{ govukErrorSummary({ titleText: "There is a problem",
+    errorList: errorList }) }}{% endif %}
+
+    <h1 class="govuk-heading-xl">What is the location where you store PPPs?</h1>
+
+    <form
+      method="post"
+      action="{{ basePath }}/store-own-address-lookup"
+      novalidate
+    >
+      {{ govukInput({ label: { text: "Postcode" }, hint: { text: "For example
+      AA3 1AB" }, id: "store-postcode", name: "store-postcode", classes:
+      "govuk-input--width-10", autocomplete: "postal-code", errorMessage: {
+      text: errors["store-postcode"] } if errors["store-postcode"], value:
+      data["store-postcode"] }) }} {{ govukInput({ label: { text: "Building name
+      or number (optional)" }, hint: { text: "For example, 15 or Prospect
+      Cottage" }, id: "store-building", name: "store-building", value:
+      data["store-building"] }) }}
+
+      <div class="govuk-button-group">
+        {{ govukButton({ text: "Find an address" }) }}
+        <span class="govuk-body"
+          >or
+          <a class="govuk-link" href="{{ basePath }}/store-own-address-manual"
+            >enter an address manually</a
+          ></span
+        >
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

@@ -41,6 +41,20 @@ const SELLER_ACTIVITIES = [
 const isAmateurOnly = (activities) =>
   activities.length > 0 && activities.every((a) => a === 'sell-amateur')
 
+// GDS "check answers" change pattern: a CYA "Change" link points at a page with
+// ?returnTo=<cya>. A middleware captures that into session, so the edited page's
+// POST returns to the CYA instead of continuing through the flow.
+// consumeReturnTo returns the CYA page name once (then clears it), or null for a
+// normal forward step.
+const consumeReturnTo = (req) => {
+  const back = req.session.data && req.session.data.returnTo
+  if (back) {
+    delete req.session.data.returnTo
+    return back
+  }
+  return null
+}
+
 const clearAdditionalAddressFields = (d) => {
   const fields = [
     'add-line-1',
@@ -63,5 +77,6 @@ module.exports = {
   validate,
   SELLER_ACTIVITIES,
   isAmateurOnly,
+  consumeReturnTo,
   clearAdditionalAddressFields
 }

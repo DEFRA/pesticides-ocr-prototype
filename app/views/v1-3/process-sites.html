@@ -1,0 +1,29 @@
+{% extends "layouts/main.html" %} {% set basePath = "/v1-3" %} {% from
+"govuk/components/radios/macro.njk" import govukRadios %} {% from
+"govuk/components/button/macro.njk" import govukButton %} {% from
+"govuk/components/error-summary/macro.njk" import govukErrorSummary %} {% set
+pageName = "At how many sites do you process PPPs in Great Britain?" %} {% set
+backLink = basePath + "/process-products" %} {% block content %}
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+    {% if errorList %}{{ govukErrorSummary({ titleText: "There is a problem",
+    errorList: errorList }) }}{% endif %}
+
+    <form method="post" action="{{ basePath }}/process-sites" novalidate>
+      {{ govukRadios({ name: "process-sites", errorMessage: { text:
+      errors["process-sites"] } if errors["process-sites"], fieldset: { legend:
+      { text: "At how many sites do you process PPPs in Great Britain?",
+      isPageHeading: true, classes: "govuk-fieldset__legend--l" } }, hint: {
+      text: "Select the number of sites you are responsible for." }, items: [ {
+      value: "1 to 10", text: "1 to 10", checked: checked("process-sites", "1 to
+      10") }, { value: "11 to 50", text: "11 to 50", checked:
+      checked("process-sites", "11 to 50") }, { value: "51 to 200", text: "51 to
+      200", checked: checked("process-sites", "51 to 200") }, { value: "201 to
+      400", text: "201 to 400", checked: checked("process-sites", "201 to 400")
+      }, { value: "400 and over", text: "400 and over", checked:
+      checked("process-sites", "400 and over") } ] }) }} {{ govukButton({ text:
+      "Continue" }) }}
+    </form>
+  </div>
+</div>
+{% endblock %}

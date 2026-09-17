@@ -1,0 +1,334 @@
+{% extends "layouts/main.html" %} {% set basePath = "/v1-3" %} {% from
+"govuk/components/summary-list/macro.njk" import govukSummaryList %} {% from
+"govuk/components/button/macro.njk" import govukButton %} {% set pageName =
+"Check your details" %} {# Boolean flags (usingAssurance, store*, import*,
+sell*), the resolved storing-where label lines, and the back link are computed
+in the /check-answers GET route — the formatter reflows {% set %} blocks like
+prose and would break in-template string comparisons and multi-word map keys. #}
+{% set backLink = cyaBack %} {% set activityLabels = { "using": "Using PPPs as
+part of your work", "manufacturing": "Manufacturing PPPs", "importing": "Import
+PPPs", "processing": "Processing PPPs", "selling": "Selling PPPs",
+"distributing": "Distributing PPPs", "storing-only": "Only storing PPPs for
+other businesses" } %} {# Which field holds the subsectors for each main sector,
+for the nested bullets #} {% set subsectorMap = { "Agriculture":
+data["agri-subsector"], "Horticulture": data["horti-subsector"], "Amenity":
+data["amenity-subsector"] } %} {# Render one or many coded values as their
+labels, one per line #} {% macro labelled(value, labels) %} {%- if value -%} {%-
+if value is string -%}{{ labels[value] or value }} {%- else -%}{% for v in value
+%}{{ labels[v] or v }}{% if not loop.last %}<br />{% endif %}{% endfor %} {%-
+endif -%} {%- endif -%} {% endmacro %} {% block content %}
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+    <h1 class="govuk-heading-xl">Check your details</h1>
+
+    {% set businessActivitiesHtml %}{{ labelled(data.activities, activityLabels)
+    }}{% endset %} {% set mainAddressHtml %}{% if data["international-address"]
+    %}{{ data["international-address"] | replace("\n", "<br />") | safe }}{%
+    else %}{{ data["address-line-1"] }}{% if data["address-line-2"] %}<br />{{
+    data["address-line-2"] }}{% endif %}<br />{{ data["address-town"] }}<br />{{
+    data["address-postcode"] }}<br />{{ data["address-country"] }}{% endif %}{%
+    endset %} {% set headOfficeHtml %}{% if data["sell-ho-line-1"] %}{{
+    data["sell-ho-line-1"] }}{% if data["sell-ho-line-2"] %}<br />{{
+    data["sell-ho-line-2"] }}{% endif %}<br />{{ data["sell-ho-town"] }}<br />{{
+    data["sell-ho-postcode"] }}<br />{{ data["sell-ho-country"] }}{% else %}{{
+    data["sell-ho-building"] or "Pesticides House" }}<br />{{
+    data["sell-ho-postcode"] or "AA3 1AB" }}{% endif %}{% endset %}
+
+    <h2 class="govuk-heading-m">Business details</h2>
+
+    {% set businessRows = [] %} {% set businessRows = (businessRows.push({ key:
+    { text: "Business PPP activities" }, value: { html: businessActivitiesHtml
+    }, actions: { items: [{ href: basePath +
+    "/activities?returnTo=check-answers", text: "Change", visuallyHiddenText:
+    "business PPP activities" }] } }), businessRows) %} {% set businessRows =
+    (businessRows.push({ key: { text: "Business name" }, value: { text:
+    data["business-name"] }, actions: { items: [{ href: basePath +
+    "/business-name?returnTo=check-answers", text: "Change", visuallyHiddenText:
+    "business name" }] } }), businessRows) %} {% if sellSellingOnly %} {% set
+    businessRows = (businessRows.push({ key: { text: "Head office address" },
+    value: { html: headOfficeHtml }, actions: { items: [{ href: basePath +
+    "/sell-amateur-head-office-address-lookup?returnTo=check-answers", text:
+    "Change", visuallyHiddenText: "head office address" }] } }), businessRows)
+    %} {% set businessRows = (businessRows.push({ key: { text: "Contact name" },
+    value: { text: data["sell-contact-name"] }, actions: { items: [{ href:
+    basePath + "/sell-amateur-contact-details?returnTo=check-answers", text:
+    "Change", visuallyHiddenText: "contact name" }] } }), businessRows) %} {%
+    set businessRows = (businessRows.push({ key: { text: "Contact role" },
+    value: { text: data["sell-contact-job-title"] }, actions: { items: [{ href:
+    basePath + "/sell-amateur-contact-details?returnTo=check-answers", text:
+    "Change", visuallyHiddenText: "contact role" }] } }), businessRows) %} {%
+    set businessRows = (businessRows.push({ key: { text: "Contact email" },
+    value: { text: data["sell-contact-email"] }, actions: { items: [{ href:
+    basePath + "/sell-amateur-contact-details?returnTo=check-answers", text:
+    "Change", visuallyHiddenText: "contact email" }] } }), businessRows) %} {%
+    set businessRows = (businessRows.push({ key: { text: "Contact telephone" },
+    value: { text: data["sell-contact-telephone"] }, actions: { items: [{ href:
+    basePath + "/sell-amateur-contact-details?returnTo=check-answers", text:
+    "Change", visuallyHiddenText: "contact telephone" }] } }), businessRows) %}
+    {% else %} {% set businessRows = (businessRows.push({ key: { text: "Main
+    address" }, value: { html: mainAddressHtml }, actions: { items: [{ href:
+    basePath + "/main-address?returnTo=check-answers", text: "Change",
+    visuallyHiddenText: "main address" }] } }), businessRows) %} {% set
+    businessRows = (businessRows.push({ key: { text: "Contact name" }, value: {
+    text: data["contact-name"] }, actions: { items: [{ href: basePath +
+    "/contact-details?returnTo=check-answers", text: "Change",
+    visuallyHiddenText: "contact name" }] } }), businessRows) %} {% set
+    businessRows = (businessRows.push({ key: { text: "Contact role" }, value: {
+    text: data["contact-job-title"] }, actions: { items: [{ href: basePath +
+    "/contact-details?returnTo=check-answers", text: "Change",
+    visuallyHiddenText: "contact role" }] } }), businessRows) %} {% set
+    businessRows = (businessRows.push({ key: { text: "Contact email" }, value: {
+    text: data["contact-email"] }, actions: { items: [{ href: basePath +
+    "/contact-details?returnTo=check-answers", text: "Change",
+    visuallyHiddenText: "contact email" }] } }), businessRows) %} {% set
+    businessRows = (businessRows.push({ key: { text: "Contact telephone" },
+    value: { text: data["contact-telephone"] }, actions: { items: [{ href:
+    basePath + "/contact-details?returnTo=check-answers", text: "Change",
+    visuallyHiddenText: "contact telephone" }] } }), businessRows) %} {% endif
+    %} {{ govukSummaryList({ rows: businessRows }) }} {# ---- Using PPPs section
+    ---- #} {% if data.activities and "using" in data.activities %}
+    <h2 class="govuk-heading-m">
+      {{ activityLabels["using"] if multiActivity else "PPP activity details" }}
+    </h2>
+
+    {% set thirdPartyHtml %}{{ data["third-party-name"] }}<br />{{
+    data["third-party-line-1"] }}{% if data["third-party-line-2"] %}<br />{{
+    data["third-party-line-2"] }}{% endif %}<br />{{ data["third-party-town"]
+    }}<br />{{ data["third-party-postcode"] }}<br />{{
+    data["third-party-country"] }}{% endset %} {# Main sector of work: each main
+    sector on its own line with its subsectors as bullets beneath #} {% set
+    sectorHtml %} {%- set sectors = [data.sector] if data.sector is string else
+    (data.sector or []) -%} {%- for s in sectors -%} {{ s }} {%- set subs =
+    subsectorMap[s] -%} {%- if subs -%} {%- set subsList = [subs] if subs is
+    string else subs -%}
+    <ul class="govuk-list govuk-list--bullet govuk-!-margin-top-1">
+      {% for sub in subsList %}
+      <li>{{ sub }}</li>
+      {% endfor %}
+    </ul>
+    {%- elif not loop.last -%}<br />{%- endif -%} {%- endfor -%} {%- if
+    data["sector-other"] %}{{ data["sector-other"] }}{% endif -%} {% endset %}
+    {% set assuranceHtml %}{{ labelled(data["assurance-schemes"], {}) }}{% if
+    data["assurance-schemes-other"] %}<br />{{ data["assurance-schemes-other"]
+    }}{% endif %}{% endset %} {% set storeAppliedHtml %}{{ data["store-applied"]
+    }}{% if usingStoreOwnSites and usingStoringWhereText %}<br />{{
+    usingStoringWhereText }}{% endif %}{% endset %} {# "PPP store details":
+    third-party storage contact, or the own storage address when it differs from
+    the main address #} {% set storeDetailsHtml %}{% if usingStoreThirdParty
+    %}{{ data["store-3p-name"] }}{% if data["store-3p-business"] %}<br />{{
+    data["store-3p-business"] }}{% endif %}<br />{{ data["store-3p-telephone"]
+    }}<br />{{ data["store-3p-email"] }}{% elif usingStoreOwnDifferent %}{% if
+    data["store-line-1"] %}{{ data["store-line-1"] }}{% if data["store-line-2"]
+    %}<br />{{ data["store-line-2"] }}{% endif %}<br />{{ data["store-town"]
+    }}<br />{{ data["store-postcode"] }}<br />{{ data["store-country"] }}{% else
+    %}{{ data["store-building"] }}<br />{{ data["store-postcode"] }}{% endif
+    %}{% endif %}{% endset %} {% set storeDetailsHref = (basePath +
+    "/store-3rd-party-contact") if usingStoreThirdParty else (basePath +
+    "/store-own-address-lookup") %} {% set pppRows = [] %} {% set pppRows =
+    (pppRows.push({ key: { text: "Who applies PPPs?" }, value: { text:
+    data["who-applies"] }, actions: { items: [{ href: basePath +
+    "/who-applies?returnTo=check-answers", text: "Change", visuallyHiddenText:
+    "who applies PPPs" }] } }), pppRows) %} {% if usingAnotherOrg %} {% set
+    pppRows = (pppRows.push({ key: { text: "Third party details" }, value: {
+    html: thirdPartyHtml }, actions: { items: [{ href: basePath +
+    "/third-party?returnTo=check-answers", text: "Change", visuallyHiddenText:
+    "third party details" }] } }), pppRows) %} {% endif %} {% set pppRows =
+    (pppRows.push({ key: { text: "Main sector of work" }, value: { html:
+    sectorHtml }, actions: { items: [{ href: basePath +
+    "/sector?returnTo=check-answers", text: "Change", visuallyHiddenText: "main
+    sector of work" }] } }), pppRows) %} {% if usingAssurance %} {% set pppRows
+    = (pppRows.push({ key: { text: "Assurance schemes" }, value: { html:
+    assuranceHtml }, actions: { items: [{ href: basePath +
+    "/assurance-schemes?returnTo=check-answers", text: "Change",
+    visuallyHiddenText: "assurance schemes" }] } }), pppRows) %} {% endif %} {%
+    set pppRows = (pppRows.push({ key: { text: "Do you store applied PPPs?" },
+    value: { html: storeAppliedHtml }, actions: { items: [{ href: basePath +
+    "/store-applied?returnTo=check-answers", text: "Change", visuallyHiddenText:
+    "whether you store applied PPPs" }] } }), pppRows) %} {% if
+    usingStoreThirdParty or usingStoreOwnDifferent %} {% set pppRows =
+    (pppRows.push({ key: { text: "PPP store details" }, value: { html:
+    storeDetailsHtml }, actions: { items: [{ href: storeDetailsHref +
+    "?returnTo=check-answers", text: "Change", visuallyHiddenText: "PPP store
+    details" }] } }), pppRows) %} {% endif %} {% if usingShowStorageSites %} {%
+    set pppRows = (pppRows.push({ key: { text: "How many storage sites?" },
+    value: { text: data["store-sites"] }, actions: { items: [{ href: basePath +
+    "/store-sites?returnTo=check-answers", text: "Change", visuallyHiddenText:
+    "how many storage sites" }] } }), pppRows) %} {% endif %} {% set pppRows =
+    (pppRows.push({ key: { text: "Quantity of PPPs or adjuvants used in the last
+    year" }, value: { text: data["quantity"] }, actions: { items: [{ href:
+    basePath + "/quantity?returnTo=check-answers", text: "Change",
+    visuallyHiddenText: "quantity of PPPs or adjuvants" }] } }), pppRows) %} {{
+    govukSummaryList({ rows: pppRows }) }} {% endif %} {# ---- Manufacturing
+    PPPs section ---- #} {% if data.activities and "manufacturing" in
+    data.activities %}
+    <h2 class="govuk-heading-m">
+      {{ activityLabels["manufacturing"] if multiActivity else "PPP activity
+      details" }}
+    </h2>
+
+    {% set manufactureQuantityText %}{% if data["manufacture-quantity"] %}{{
+    data["manufacture-quantity"] }} Kgs/litres{% endif %}{% endset %} {{
+    govukSummaryList({ rows: [ { key: { text: "What products do you
+    manufacture?" }, value: { text: data["manufacture-products"] }, actions: {
+    items: [{ href: basePath + "/manufacture-products?returnTo=check-answers",
+    text: "Change", visuallyHiddenText: "what products you manufacture" }] } },
+    { key: { text: "How many manufacturing sites?" }, value: { text:
+    data["manufacture-sites"] }, actions: { items: [{ href: basePath +
+    "/manufacture-sites?returnTo=check-answers", text: "Change",
+    visuallyHiddenText: "how many manufacturing sites" }] } }, { key: { text:
+    "Volume of PPPs and ingredients or adjuvants manufactured in the last year"
+    }, value: { text: manufactureQuantityText | trim }, actions: { items: [{
+    href: basePath + "/manufacture-quantity?returnTo=check-answers", text:
+    "Change", visuallyHiddenText: "volume manufactured in the last year" }] } }
+    ] }) }} {% endif %} {# ---- Importing PPPs section ---- #} {% if
+    data.activities and "importing" in data.activities %}
+    <h2 class="govuk-heading-m">
+      {{ activityLabels["importing"] if multiActivity else "PPP activity
+      details" }}
+    </h2>
+
+    {% set importStoringText %}{{ data["import-storing"] }}{% if
+    importStoreOwnSites and importStoringWhereText %}<br />{{
+    importStoringWhereText }}{% endif %}{% endset %} {% set
+    importStoreDetailsHtml %}{% if importStoreThirdParty %}{{
+    data["import-store-3p-name"] }}{% if data["import-store-3p-job-title"] %}<br />{{
+    data["import-store-3p-job-title"] }}{% endif %}<br />{{
+    data["import-store-3p-telephone"] }}<br />{{ data["import-store-3p-email"]
+    }}{% elif importStoreOwnDifferent %}{% if data["import-store-line-1"] %}{{
+    data["import-store-line-1"] }}{% if data["import-store-line-2"] %}<br />{{
+    data["import-store-line-2"] }}{% endif %}<br />{{ data["import-store-town"]
+    }}<br />{{ data["import-store-postcode"] }}<br />{{
+    data["import-store-country"] }}{% else %}{{ data["import-store-building"]
+    }}<br />{{ data["import-store-postcode"] }}{% endif %}{% endif %}{% endset
+    %} {% set importStoreDetailsHref = (basePath +
+    "/import-store-3rd-party-contact") if importStoreThirdParty else (basePath +
+    "/import-store-own-address-lookup") %} {% set importQuantityText %}{% if
+    data["import-quantity"] %}{{ data["import-quantity"] }} Kgs/litres{% endif
+    %}{% endset %} {% set importRows = [] %} {% set importRows =
+    (importRows.push({ key: { text: "What products do you import?" }, value: {
+    text: data["import-products"] }, actions: { items: [{ href: basePath +
+    "/import-products?returnTo=check-answers", text: "Change",
+    visuallyHiddenText: "what products you import" }] } }), importRows) %} {%
+    set importRows = (importRows.push({ key: { text: "Do you store imported
+    PPPs?" }, value: { html: importStoringText }, actions: { items: [{ href:
+    basePath + "/import-storing?returnTo=check-answers", text: "Change",
+    visuallyHiddenText: "whether you store imported PPPs" }] } }), importRows)
+    %} {% if importStoreThirdParty or importStoreOwnDifferent %} {% set
+    importRows = (importRows.push({ key: { text: "PPP store details" }, value: {
+    html: importStoreDetailsHtml }, actions: { items: [{ href:
+    importStoreDetailsHref + "?returnTo=check-answers", text: "Change",
+    visuallyHiddenText: "PPP store details" }] } }), importRows) %} {% endif %}
+    {% if importShowStorageSites %} {% set importRows = (importRows.push({ key:
+    { text: "How many storage sites?" }, value: { text:
+    data["import-store-sites"] }, actions: { items: [{ href: basePath +
+    "/import-store-sites?returnTo=check-answers", text: "Change",
+    visuallyHiddenText: "how many storage sites" }] } }), importRows) %} {%
+    endif %} {% set importRows = (importRows.push({ key: { text: "Volume of PPPs
+    imported in the last year" }, value: { text: importQuantityText | trim },
+    actions: { items: [{ href: basePath +
+    "/import-quantity?returnTo=check-answers", text: "Change",
+    visuallyHiddenText: "volume imported in the last year" }] } }), importRows)
+    %} {{ govukSummaryList({ rows: importRows }) }} {% endif %} {# ----
+    Processing PPPs section ---- #} {% if data.activities and "processing" in
+    data.activities %}
+    <h2 class="govuk-heading-m">
+      {{ activityLabels["processing"] if multiActivity else "PPP activity
+      details" }}
+    </h2>
+
+    {% set processQuantityText %}{% if data["process-quantity"] %}{{
+    data["process-quantity"] }} Kgs/litres{% endif %}{% endset %} {{
+    govukSummaryList({ rows: [ { key: { text: "What products do you process?" },
+    value: { text: data["process-products"] }, actions: { items: [{ href:
+    basePath + "/process-products?returnTo=check-answers", text: "Change",
+    visuallyHiddenText: "what products you process" }] } }, { key: { text: "How
+    many processing sites?" }, value: { text: data["process-sites"] }, actions:
+    { items: [{ href: basePath + "/process-sites?returnTo=check-answers", text:
+    "Change", visuallyHiddenText: "how many processing sites" }] } }, { key: {
+    text: "Volume of PPPs and ingredients or adjuvants processed in the last
+    year" }, value: { text: processQuantityText | trim }, actions: { items: [{
+    href: basePath + "/process-quantity?returnTo=check-answers", text: "Change",
+    visuallyHiddenText: "volume processed in the last year" }] } } ] }) }} {%
+    endif %} {# ---- Selling PPPs section ---- #} {% if data.activities and
+    "selling" in data.activities %}
+    <h2 class="govuk-heading-m">
+      {{ activityLabels["selling"] if multiActivity else "PPP activity details"
+      }}
+    </h2>
+
+    {% set sellProVolText %}{% if data["sell-pro-quantity"] %}{{
+    data["sell-pro-quantity"] }} kg/l{% endif %}{% endset %} {% set
+    sellAmateurVolText %}{% if data["sell-amateur-quantity"] %}£{{
+    data["sell-amateur-quantity"] }}{% endif %}{% endset %} {% set sellRows = []
+    %} {% set sellRows = (sellRows.push({ key: { text: "Professional or amateur
+    use?" }, value: { text: data["sell-use-type"] }, actions: { items: [{ href:
+    basePath + "/sell?returnTo=check-answers", text: "Change",
+    visuallyHiddenText: "professional or amateur use" }] } }), sellRows) %} {%
+    if sellPro %} {% set sellRows = (sellRows.push({ key: { text: "What products
+    do you sell?" }, value: { text: data["sell-pro-products"] }, actions: {
+    items: [{ href: basePath + "/sell-pro-products?returnTo=check-answers",
+    text: "Change", visuallyHiddenText: "what products you sell" }] } }),
+    sellRows) %} {% set sellRows = (sellRows.push({ key: { text: "Volume of PPPs
+    and ingredients or adjuvants sold in the last year" }, value: { text:
+    sellProVolText | trim }, actions: { items: [{ href: basePath +
+    "/sell-pro-quantity?returnTo=check-answers", text: "Change",
+    visuallyHiddenText: "volume sold in the last year" }] } }), sellRows) %} {%
+    set sellRows = (sellRows.push({ key: { text: "How many selling sites?" },
+    value: { text: data["sell-pro-sites"] }, actions: { items: [{ href: basePath
+    + "/sell-pro-sites?returnTo=check-answers", text: "Change",
+    visuallyHiddenText: "how many selling sites" }] } }), sellRows) %} {% else
+    %} {% set sellRows = (sellRows.push({ key: { text: "Volume of PPPs and
+    ingredients or adjuvants sold in the last year" }, value: { text:
+    sellAmateurVolText | trim }, actions: { items: [{ href: basePath +
+    "/sell-amateur-quantity?returnTo=check-answers", text: "Change",
+    visuallyHiddenText: "volume sold in the last year" }] } }), sellRows) %} {%
+    endif %} {{ govukSummaryList({ rows: sellRows }) }} {% endif %} {# ----
+    Distributing PPPs section ---- #} {% if data.activities and "distributing"
+    in data.activities %}
+    <h2 class="govuk-heading-m">
+      {{ activityLabels["distributing"] if multiActivity else "PPP activity
+      details" }}
+    </h2>
+
+    {% set distributeQuantityText %}{% if data["distribute-quantity"] %}{{
+    data["distribute-quantity"] }} Kgs/litres{% endif %}{% endset %} {{
+    govukSummaryList({ rows: [ { key: { text: "What products do you distribute?"
+    }, value: { text: data["distribute-products"] }, actions: { items: [{ href:
+    basePath + "/distribute-products?returnTo=check-answers", text: "Change",
+    visuallyHiddenText: "what products you distribute" }] } }, { key: { text:
+    "How many distribution sites?" }, value: { text: data["distribute-sites"] },
+    actions: { items: [{ href: basePath +
+    "/distribute-sites?returnTo=check-answers", text: "Change",
+    visuallyHiddenText: "how many distribution sites" }] } }, { key: { text:
+    "Volume of PPPs and ingredients or adjuvants distributed in the last year"
+    }, value: { text: distributeQuantityText | trim }, actions: { items: [{
+    href: basePath + "/distribute-quantity?returnTo=check-answers", text:
+    "Change", visuallyHiddenText: "volume distributed in the last year" }] } } ]
+    }) }} {% endif %} {# ---- Only storing PPPs section ---- #} {% if
+    data.activities and "storing-only" in data.activities %}
+    <h2 class="govuk-heading-m">
+      {{ activityLabels["storing-only"] if multiActivity else "PPP activity
+      details" }}
+    </h2>
+
+    {% set storeOnlyQuantityText %}{% if data["store-only-quantity"] %}{{
+    data["store-only-quantity"] }} Kgs/litres{% endif %}{% endset %} {{
+    govukSummaryList({ rows: [ { key: { text: "What products do you store?" },
+    value: { text: data["store-only-products"] }, actions: { items: [{ href:
+    basePath + "/store-only-products?returnTo=check-answers", text: "Change",
+    visuallyHiddenText: "what products you store" }] } }, { key: { text: "How
+    many storage sites?" }, value: { text: data["store-only-sites"] }, actions:
+    { items: [{ href: basePath + "/store-only-sites?returnTo=check-answers",
+    text: "Change", visuallyHiddenText: "how many storage sites" }] } }, { key:
+    { text: "Volume of PPPs and ingredients or adjuvants stored in the last
+    year" }, value: { text: storeOnlyQuantityText | trim }, actions: { items: [{
+    href: basePath + "/store-only-quantity?returnTo=check-answers", text:
+    "Change", visuallyHiddenText: "volume stored in the last year" }] } } ] })
+    }} {% endif %}
+
+    <form method="post" action="{{ basePath }}/check-answers" novalidate>
+      {{ govukButton({ text: "Continue" }) }}
+    </form>
+  </div>
+</div>
+{% endblock %}

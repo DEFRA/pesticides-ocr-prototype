@@ -18,6 +18,23 @@
     <hr class="govuk-section-break govuk-section-break--visible govuk-section-break--l">
 
     <h2 class="govuk-heading-l">
+      Version 1.3
+      <span class="govuk-caption-m">In development</span>
+    </h2>
+    <p class="govuk-body">
+      Activity-based branching (Figma flow 1.3): the business activities the user
+      selects route them through a dedicated flow for each activity, in the order
+      selected, before a combined check-answers.
+    </p>
+    {{ govukButton({
+      text: "Start version 1.3",
+      href: "/v1-3/start",
+      isStartButton: true
+    }) }}
+
+    <hr class="govuk-section-break govuk-section-break--visible govuk-section-break--l">
+
+    <h2 class="govuk-heading-l">
       Version 1.2
       <span class="govuk-caption-m">Deployed 6 August 2026</span>
     </h2>
@@ -28,7 +45,8 @@
     {{ govukButton({
       text: "Start version 1.2",
       href: "/v1-2/start",
-      isStartButton: true
+      isStartButton: true,
+      classes: "govuk-button--secondary"
     }) }}
 
     <hr class="govuk-section-break govuk-section-break--visible govuk-section-break--l">

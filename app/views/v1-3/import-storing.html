@@ -1,0 +1,28 @@
+{% extends "layouts/main.html" %} {% set basePath = "/v1-3" %} {% from
+"govuk/components/radios/macro.njk" import govukRadios %} {% from
+"govuk/components/button/macro.njk" import govukButton %} {% from
+"govuk/components/error-summary/macro.njk" import govukErrorSummary %} {% set
+pageName = "Do you store products you import?" %} {% set backLink = basePath +
+"/import-products" %} {% block content %}
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+    {% if errorList %}{{ govukErrorSummary({ titleText: "There is a problem",
+    errorList: errorList }) }}{% endif %}
+
+    <form method="post" action="{{ basePath }}/import-storing" novalidate>
+      {{ govukRadios({ name: "import-storing", errorMessage: { text:
+      errors["import-storing"] } if errors["import-storing"], fieldset: {
+      legend: { text: "Do you store products you import?", isPageHeading: true,
+      classes: "govuk-fieldset__legend--l" } }, hint: { text: "Select an option"
+      }, items: [ { value: "Yes, at sites we own", text: "Yes, at sites we own",
+      checked: checked("import-storing", "Yes, at sites we own") }, { value:
+      "Yes, a third party stores them on our behalf", text: "Yes, a third party
+      stores them on our behalf", checked: checked("import-storing", "Yes, a
+      third party stores them on our behalf") }, { value: "No, we don't store
+      PPPs", text: "No, we don't store PPPs", checked: checked("import-storing",
+      "No, we don't store PPPs") } ] }) }} {{ govukButton({ text: "Continue" })
+      }}
+    </form>
+  </div>
+</div>
+{% endblock %}

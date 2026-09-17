@@ -1,0 +1,31 @@
+{% extends "layouts/main.html" %} {% set basePath = "/v1-3" %} {% from
+"govuk/components/radios/macro.njk" import govukRadios %} {% from
+"govuk/components/button/macro.njk" import govukButton %} {% from
+"govuk/components/error-summary/macro.njk" import govukErrorSummary %} {% set
+pageName = "What products do you store in England, Scotland or Wales?" %} {% set
+backLink = entryBackLink or (basePath + "/contact-details") %} {% block content
+%}
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+    {% if errorList %}{{ govukErrorSummary({ titleText: "There is a problem",
+    errorList: errorList }) }}{% endif %}
+
+    <form method="post" action="{{ basePath }}/store-only-products" novalidate>
+      {{ govukRadios({ name: "store-only-products", errorMessage: { text:
+      errors["store-only-products"] } if errors["store-only-products"],
+      fieldset: { legend: { text: "What products do you store in England,
+      Scotland or Wales?", isPageHeading: true, classes:
+      "govuk-fieldset__legend--l" } }, hint: { text: "Select an option" },
+      items: [ { value: "Plant protection products (PPPs) only", text: "Plant
+      protection products (PPPs) only", checked: checked("store-only-products",
+      "Plant protection products (PPPs) only") }, { value: "Ingredients or
+      adjuvants only", text: "Ingredients or adjuvants only", checked:
+      checked("store-only-products", "Ingredients or adjuvants only") }, {
+      value: "Both PPPs and ingredients or adjuvants", text: "Both PPPs and
+      ingredients or adjuvants", checked: checked("store-only-products", "Both
+      PPPs and ingredients or adjuvants") } ] }) }} {{ govukButton({ text:
+      "Continue" }) }}
+    </form>
+  </div>
+</div>
+{% endblock %}

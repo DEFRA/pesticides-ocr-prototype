@@ -1,0 +1,49 @@
+{% extends "layouts/main.html" %} {% set basePath = "/v1-3" %} {% from
+"govuk/components/input/macro.njk" import govukInput %} {% from
+"govuk/components/radios/macro.njk" import govukRadios %} {% from
+"govuk/components/button/macro.njk" import govukButton %} {% from
+"govuk/components/error-summary/macro.njk" import govukErrorSummary %} {% set
+pageName = "Main site address" %} {% set backLink = basePath +
+"/sell-amateur-head-office-address-lookup" %} {% block content %}
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+    {% if errorList %}{{ govukErrorSummary({ titleText: "There is a problem",
+    errorList: errorList }) }}{% endif %}
+
+    <h1 class="govuk-heading-xl">Main site address</h1>
+    <p class="govuk-body">
+      This is the address most relevant to the PPP activities you are
+      responsible for.
+    </p>
+
+    <form
+      method="post"
+      action="{{ basePath }}/sell-amateur-head-office-manual-address"
+      novalidate
+    >
+      {{ govukInput({ label: { text: "Address line 1" }, id: "sell-ho-line-1",
+      name: "sell-ho-line-1", autocomplete: "address-line1", errorMessage: {
+      text: errors["sell-ho-line-1"] } if errors["sell-ho-line-1"], value:
+      data["sell-ho-line-1"] }) }} {{ govukInput({ label: { text: "Address line
+      2 (optional)" }, id: "sell-ho-line-2", name: "sell-ho-line-2",
+      autocomplete: "address-line2", value: data["sell-ho-line-2"] }) }} {{
+      govukInput({ label: { text: "Town or city" }, id: "sell-ho-town", name:
+      "sell-ho-town", classes: "govuk-!-width-two-thirds", autocomplete:
+      "address-level2", errorMessage: { text: errors["sell-ho-town"] } if
+      errors["sell-ho-town"], value: data["sell-ho-town"] }) }} {{ govukInput({
+      label: { text: "Postcode" }, id: "sell-ho-postcode", name:
+      "sell-ho-postcode", classes: "govuk-input--width-10", autocomplete:
+      "postal-code", errorMessage: { text: errors["sell-ho-postcode"] } if
+      errors["sell-ho-postcode"], value: data["sell-ho-postcode"] }) }} {{
+      govukRadios({ name: "sell-ho-country", errorMessage: { text:
+      errors["sell-ho-country"] } if errors["sell-ho-country"], fieldset: {
+      legend: { text: "Country" } }, items: [ { value: "England", text:
+      "England", checked: checked("sell-ho-country", "England") }, { value:
+      "Scotland", text: "Scotland", checked: checked("sell-ho-country",
+      "Scotland") }, { value: "Wales", text: "Wales", checked:
+      checked("sell-ho-country", "Wales") } ] }) }} {{ govukButton({ text:
+      "Continue" }) }}
+    </form>
+  </div>
+</div>
+{% endblock %}
