@@ -1344,6 +1344,9 @@ module.exports = (router) => {
     const lastAct = flowActs[flowActs.length - 1]
     res.render(view('check-answers'), {
       cyaBack: P + (lastPage[lastAct] || '/quantity'),
+      // With more than one activity, title each section with its activity name
+      // (a single activity keeps the "PPP activity details" heading per Figma).
+      multiActivity: flowActs.length > 1,
       // Resolved "where do you store" label lines (kept out of the template so
       // the formatter can't split the multi-word map keys used for lookup)
       usingStoringWhereText:
