@@ -61,6 +61,15 @@ const firstActivityEntry = (activities) => {
   return 'check-answers'
 }
 
+// After an activity's flow ends, go to the next selected activity's entry (in
+// selection order — the checkbox DOM order), or check-answers when it was the
+// last one. This is what chains multiple selected activities before the CYA.
+const nextEntryAfter = (currentAct, activities) => {
+  const flow = activities.filter((a) => activityEntry[a])
+  const next = flow[flow.indexOf(currentAct) + 1]
+  return next ? activityEntry[next] : 'check-answers'
+}
+
 // Selling-only skips the common address/contact pages (business-name → sell), so
 // the Sell flow itself collects the head-office address and contact when true.
 const isSellingOnly = (activities) =>
@@ -399,7 +408,9 @@ module.exports = (router) => {
     if (!v.ok) return res.render(view('quantity'), v)
     const back = consumeReturnTo(req)
     if (back) return res.redirect(P + '/' + back)
-    res.redirect(P + '/check-answers')
+    res.redirect(
+      P + '/' + nextEntryAfter('using', toArray(req.session.data.activities))
+    )
   })
 
   // Assurance schemes (optional, no validation) → next in the sector chain.
@@ -591,7 +602,11 @@ module.exports = (router) => {
     if (!v.ok) return res.render(view('manufacture-quantity'), v)
     const back = consumeReturnTo(req)
     if (back) return res.redirect(P + '/' + back)
-    res.redirect(P + '/check-answers')
+    res.redirect(
+      P +
+        '/' +
+        nextEntryAfter('manufacturing', toArray(req.session.data.activities))
+    )
   })
 
   // --- Selling PPPs journey (Figma 1.3) -----------------------------------
@@ -644,11 +659,13 @@ module.exports = (router) => {
     const back = consumeReturnTo(req)
     if (back) return res.redirect(P + '/' + back)
     // Selling-only skipped the common address/contact pages, so collect the head
-    // office address next; otherwise those were already captured → check-answers.
+    // office address next; otherwise those were already captured → next activity.
     if (isSellingOnly(toArray(req.session.data.activities))) {
       return res.redirect(P + '/sell-amateur-head-office-address-lookup')
     }
-    res.redirect(P + '/check-answers')
+    res.redirect(
+      P + '/' + nextEntryAfter('selling', toArray(req.session.data.activities))
+    )
   })
 
   router.post(P + '/sell-pro-quantity', (req, res) => {
@@ -680,7 +697,9 @@ module.exports = (router) => {
     if (isSellingOnly(toArray(req.session.data.activities))) {
       return res.redirect(P + '/sell-amateur-head-office-address-lookup')
     }
-    res.redirect(P + '/check-answers')
+    res.redirect(
+      P + '/' + nextEntryAfter('selling', toArray(req.session.data.activities))
+    )
   })
 
   // Head office address (used by both Sell branches when selling-only). "Find an
@@ -757,7 +776,9 @@ module.exports = (router) => {
     if (!v.ok) return res.render(view('sell-amateur-contact-details'), v)
     const back = consumeReturnTo(req)
     if (back) return res.redirect(P + '/' + back)
-    res.redirect(P + '/check-answers')
+    res.redirect(
+      P + '/' + nextEntryAfter('selling', toArray(req.session.data.activities))
+    )
   })
 
   // --- Only storing PPPs journey (Figma 1.3) ------------------------------
@@ -803,7 +824,11 @@ module.exports = (router) => {
     if (!v.ok) return res.render(view('store-only-quantity'), v)
     const back = consumeReturnTo(req)
     if (back) return res.redirect(P + '/' + back)
-    res.redirect(P + '/check-answers')
+    res.redirect(
+      P +
+        '/' +
+        nextEntryAfter('storing-only', toArray(req.session.data.activities))
+    )
   })
 
   // --- Distributing PPPs journey (Figma 1.3) ------------------------------
@@ -848,7 +873,11 @@ module.exports = (router) => {
     if (!v.ok) return res.render(view('distribute-quantity'), v)
     const back = consumeReturnTo(req)
     if (back) return res.redirect(P + '/' + back)
-    res.redirect(P + '/check-answers')
+    res.redirect(
+      P +
+        '/' +
+        nextEntryAfter('distributing', toArray(req.session.data.activities))
+    )
   })
 
   // --- Processing PPPs journey (Figma 1.3) --------------------------------
@@ -893,7 +922,11 @@ module.exports = (router) => {
     if (!v.ok) return res.render(view('process-quantity'), v)
     const back = consumeReturnTo(req)
     if (back) return res.redirect(P + '/' + back)
-    res.redirect(P + '/check-answers')
+    res.redirect(
+      P +
+        '/' +
+        nextEntryAfter('processing', toArray(req.session.data.activities))
+    )
   })
 
   // --- Importing PPPs journey (Figma 1.3) ---------------------------------
@@ -1061,7 +1094,11 @@ module.exports = (router) => {
     if (!v.ok) return res.render(view('import-quantity'), v)
     const back = consumeReturnTo(req)
     if (back) return res.redirect(P + '/' + back)
-    res.redirect(P + '/check-answers')
+    res.redirect(
+      P +
+        '/' +
+        nextEntryAfter('importing', toArray(req.session.data.activities))
+    )
   })
 
   // --- Additional addresses branch ---
@@ -1210,22 +1247,24 @@ module.exports = (router) => {
     const acts = toArray(d.activities)
     const sellPro = d['sell-use-type'] === 'Mostly professional use'
     const sellSellingOnly = isSellingOnly(acts)
-    // Back link → the last page of the last-relevant activity flow.
-    let cyaBack = '/quantity'
-    if (acts.includes('importing')) cyaBack = '/import-quantity'
-    else if (acts.includes('processing')) cyaBack = '/process-quantity'
-    else if (acts.includes('distributing')) cyaBack = '/distribute-quantity'
-    else if (acts.includes('storing-only')) cyaBack = '/store-only-quantity'
-    else if (acts.includes('manufacturing')) cyaBack = '/manufacture-quantity'
-    else if (acts.includes('selling')) {
-      cyaBack = sellSellingOnly
+    // Back link → the final page of the LAST selected activity's flow.
+    const lastPage = {
+      using: '/quantity',
+      manufacturing: '/manufacture-quantity',
+      importing: '/import-quantity',
+      processing: '/process-quantity',
+      distributing: '/distribute-quantity',
+      'storing-only': '/store-only-quantity',
+      selling: sellSellingOnly
         ? '/sell-amateur-contact-details'
         : sellPro
           ? '/sell-pro-sites'
           : '/sell-amateur-quantity'
     }
+    const flowActs = acts.filter((a) => activityEntry[a])
+    const lastAct = flowActs[flowActs.length - 1]
     res.render(view('check-answers'), {
-      cyaBack: P + cyaBack,
+      cyaBack: P + (lastPage[lastAct] || '/quantity'),
       // Resolved "where do you store" label lines (kept out of the template so
       // the formatter can't split the multi-word map keys used for lookup)
       usingStoringWhereText:
