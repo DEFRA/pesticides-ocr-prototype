@@ -619,7 +619,7 @@ module.exports = (router) => {
     if (answer === 'Yes, at sites we own') {
       return res.redirect(P + '/import-storing-where')
     }
-    if (answer === 'Yes, 3rd party stores') {
+    if (answer === 'Yes, a third party stores them on our behalf') {
       return res.redirect(P + '/import-store-3rd-party-contact')
     }
     res.redirect(P + '/import-quantity')
@@ -888,10 +888,23 @@ module.exports = (router) => {
   // prose and can insert newlines inside string literals, which silently breaks
   // in-template string comparisons; computing the flags here avoids that.
   const NO_STORE = "No, we don't store PPPs"
+  const STORING_WHERE_LABEL = {
+    'Main business address': 'At main business address',
+    'A different location to the main business address':
+      'At a different location'
+  }
   router.get(P + '/check-answers', (req, res) => {
     const d = req.session.data || {}
     const sectors = toArray(d.sector)
     res.render(view('check-answers'), {
+      // Resolved "where do you store" label lines (kept out of the template so
+      // the formatter can't split the multi-word map keys used for lookup)
+      usingStoringWhereText:
+        STORING_WHERE_LABEL[d['storing-where']] || d['storing-where'] || '',
+      importStoringWhereText:
+        STORING_WHERE_LABEL[d['import-storing-where']] ||
+        d['import-storing-where'] ||
+        '',
       // Using PPPs section
       usingAnotherOrg:
         d['who-applies'] === 'Another organisation applies PPPs on our behalf',
@@ -908,7 +921,8 @@ module.exports = (router) => {
         !!d['store-applied'] && d['store-applied'] !== NO_STORE,
       // Importing PPPs section
       importStoreOwnSites: d['import-storing'] === 'Yes, at sites we own',
-      importStoreThirdParty: d['import-storing'] === 'Yes, 3rd party stores',
+      importStoreThirdParty:
+        d['import-storing'] === 'Yes, a third party stores them on our behalf',
       importStoreOwnDifferent:
         d['import-storing'] === 'Yes, at sites we own' &&
         d['import-storing-where'] ===

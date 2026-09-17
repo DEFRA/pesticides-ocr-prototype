@@ -2,26 +2,24 @@
 "govuk/components/summary-list/macro.njk" import govukSummaryList %} {% from
 "govuk/components/button/macro.njk" import govukButton %} {% set pageName =
 "Check your details" %} {# Back to the last activity's final page. Boolean flags
-(usingAssurance, store*, import*) are computed in the /check-answers GET route —
-the formatter reflows {% set %} blocks like prose and would break in-template
-string comparisons. #} {% set backLink = (basePath + "/import-quantity") if
+(usingAssurance, store*, import*) and the resolved storing-where label lines are
+computed in the /check-answers GET route — the formatter reflows {% set %}
+blocks like prose and would break in-template string comparisons and multi-word
+map keys. #} {% set backLink = (basePath + "/import-quantity") if
 (data.activities and "importing" in data.activities) else ((basePath +
 "/manufacture-quantity") if (data.activities and "manufacturing" in
 data.activities) else (basePath + "/quantity")) %} {% set activityLabels = {
 "using": "Using PPPs as part of your work", "manufacturing": "Manufacturing
-PPPs", "importing": "Importing PPPs", "processing": "Processing PPPs",
-"selling": "Selling PPPs", "distributing": "Distributing PPPs", "storing-only":
-"Only storing PPPs for other businesses" } %} {# Which field holds the
-subsectors for each main sector, for the nested bullets #} {% set subsectorMap =
-{ "Agriculture": data["agri-subsector"], "Horticulture":
-data["horti-subsector"], "Amenity": data["amenity-subsector"] } %} {% set
-storingWhereLabel = { "Main business address": "At the main business address",
-"A different location to the main business address": "At a different location" }
-%} {# Render one or many coded values as their labels, one per line #} {% macro
-labelled(value, labels) %} {%- if value -%} {%- if value is string -%}{{
-labels[value] or value }} {%- else -%}{% for v in value %}{{ labels[v] or v }}{%
-if not loop.last %}<br />{% endif %}{% endfor %} {%- endif -%} {%- endif -%} {%
-endmacro %} {% block content %}
+PPPs", "importing": "Import PPPs", "processing": "Processing PPPs", "selling":
+"Selling PPPs", "distributing": "Distributing PPPs", "storing-only": "Only
+storing PPPs for other businesses" } %} {# Which field holds the subsectors for
+each main sector, for the nested bullets #} {% set subsectorMap = {
+"Agriculture": data["agri-subsector"], "Horticulture": data["horti-subsector"],
+"Amenity": data["amenity-subsector"] } %} {# Render one or many coded values as
+their labels, one per line #} {% macro labelled(value, labels) %} {%- if value
+-%} {%- if value is string -%}{{ labels[value] or value }} {%- else -%}{% for v
+in value %}{{ labels[v] or v }}{% if not loop.last %}<br />{% endif %}{% endfor
+%} {%- endif -%} {%- endif -%} {% endmacro %} {% block content %}
 <div class="govuk-grid-row">
   <div class="govuk-grid-column-two-thirds">
     <h1 class="govuk-heading-xl">Check your details</h1>
@@ -82,14 +80,13 @@ endmacro %} {% block content %}
     {% set assuranceHtml %}{{ labelled(data["assurance-schemes"], {}) }}{% if
     data["assurance-schemes-other"] %}<br />{{ data["assurance-schemes-other"]
     }}{% endif %}{% endset %} {% set storeAppliedHtml %}{{ data["store-applied"]
-    }}{% if usingStoreOwnSites and data["storing-where"] %}<br />{{
-    storingWhereLabel[data["storing-where"]] or data["storing-where"] }}{% endif
-    %}{% endset %} {# "PPP store details": third-party storage contact, or the
-    own storage address when it differs from the main address #} {% set
-    storeDetailsHtml %}{% if usingStoreThirdParty %}{{ data["store-3p-name"]
-    }}{% if data["store-3p-business"] %}<br />{{ data["store-3p-business"] }}{%
-    endif %}<br />{{ data["store-3p-telephone"] }}<br />{{
-    data["store-3p-email"] }}{% elif usingStoreOwnDifferent %}{% if
+    }}{% if usingStoreOwnSites and usingStoringWhereText %}<br />{{
+    usingStoringWhereText }}{% endif %}{% endset %} {# "PPP store details":
+    third-party storage contact, or the own storage address when it differs from
+    the main address #} {% set storeDetailsHtml %}{% if usingStoreThirdParty
+    %}{{ data["store-3p-name"] }}{% if data["store-3p-business"] %}<br />{{
+    data["store-3p-business"] }}{% endif %}<br />{{ data["store-3p-telephone"]
+    }}<br />{{ data["store-3p-email"] }}{% elif usingStoreOwnDifferent %}{% if
     data["store-line-1"] %}{{ data["store-line-1"] }}{% if data["store-line-2"]
     %}<br />{{ data["store-line-2"] }}{% endif %}<br />{{ data["store-town"]
     }}<br />{{ data["store-postcode"] }}<br />{{ data["store-country"] }}{% else
@@ -154,9 +151,8 @@ endmacro %} {% block content %}
     <h2 class="govuk-heading-m">PPP activity details</h2>
 
     {% set importStoringText %}{{ data["import-storing"] }}{% if
-    importStoreOwnSites and data["import-storing-where"] %}<br />{{
-    storingWhereLabel[data["import-storing-where"]] or
-    data["import-storing-where"] }}{% endif %}{% endset %} {% set
+    importStoreOwnSites and importStoringWhereText %}<br />{{
+    importStoringWhereText }}{% endif %}{% endset %} {% set
     importStoreDetailsHtml %}{% if importStoreThirdParty %}{{
     data["import-store-3p-name"] }}{% if data["import-store-3p-job-title"] %}<br />{{
     data["import-store-3p-job-title"] }}{% endif %}<br />{{
@@ -176,13 +172,13 @@ endmacro %} {% block content %}
     text: data["import-products"] }, actions: { items: [{ href: basePath +
     "/import-products?returnTo=check-answers", text: "Change",
     visuallyHiddenText: "what products you import" }] } }), importRows) %} {%
-    set importRows = (importRows.push({ key: { text: "Do you store products you
-    import?" }, value: { html: importStoringText }, actions: { items: [{ href:
+    set importRows = (importRows.push({ key: { text: "Do you store imported
+    PPPs?" }, value: { html: importStoringText }, actions: { items: [{ href:
     basePath + "/import-storing?returnTo=check-answers", text: "Change",
-    visuallyHiddenText: "whether you store products you import" }] } }),
-    importRows) %} {% if importStoreThirdParty or importStoreOwnDifferent %} {%
-    set importRows = (importRows.push({ key: { text: "PPP store details" },
-    value: { html: importStoreDetailsHtml }, actions: { items: [{ href:
+    visuallyHiddenText: "whether you store imported PPPs" }] } }), importRows)
+    %} {% if importStoreThirdParty or importStoreOwnDifferent %} {% set
+    importRows = (importRows.push({ key: { text: "PPP store details" }, value: {
+    html: importStoreDetailsHtml }, actions: { items: [{ href:
     importStoreDetailsHref + "?returnTo=check-answers", text: "Change",
     visuallyHiddenText: "PPP store details" }] } }), importRows) %} {% endif %}
     {% if importShowStorageSites %} {% set importRows = (importRows.push({ key:
@@ -191,8 +187,8 @@ endmacro %} {% block content %}
     "/import-store-sites?returnTo=check-answers", text: "Change",
     visuallyHiddenText: "how many storage sites" }] } }), importRows) %} {%
     endif %} {% set importRows = (importRows.push({ key: { text: "Volume of PPPs
-    and ingredients or adjuvants imported in the last year" }, value: { text:
-    importQuantityText | trim }, actions: { items: [{ href: basePath +
+    imported in the last year" }, value: { text: importQuantityText | trim },
+    actions: { items: [{ href: basePath +
     "/import-quantity?returnTo=check-answers", text: "Change",
     visuallyHiddenText: "volume imported in the last year" }] } }), importRows)
     %} {{ govukSummaryList({ rows: importRows }) }} {% endif %}
