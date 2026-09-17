@@ -287,7 +287,24 @@ endif -%} {%- endif -%} {% endmacro %} {% block content %}
     }, value: { text: distributeQuantityText | trim }, actions: { items: [{
     href: basePath + "/distribute-quantity?returnTo=check-answers", text:
     "Change", visuallyHiddenText: "volume distributed in the last year" }] } } ]
-    }) }} {% endif %}
+    }) }} {% endif %} {# ---- Only storing PPPs section ---- #} {% if
+    data.activities and "storing-only" in data.activities %}
+    <h2 class="govuk-heading-m">PPP activity details</h2>
+
+    {% set storeOnlyQuantityText %}{% if data["store-only-quantity"] %}{{
+    data["store-only-quantity"] }} Kgs/litres{% endif %}{% endset %} {{
+    govukSummaryList({ rows: [ { key: { text: "What products do you store?" },
+    value: { text: data["store-only-products"] }, actions: { items: [{ href:
+    basePath + "/store-only-products?returnTo=check-answers", text: "Change",
+    visuallyHiddenText: "what products you store" }] } }, { key: { text: "How
+    many storage sites?" }, value: { text: data["store-only-sites"] }, actions:
+    { items: [{ href: basePath + "/store-only-sites?returnTo=check-answers",
+    text: "Change", visuallyHiddenText: "how many storage sites" }] } }, { key:
+    { text: "Volume of PPPs and ingredients or adjuvants stored in the last
+    year" }, value: { text: storeOnlyQuantityText | trim }, actions: { items: [{
+    href: basePath + "/store-only-quantity?returnTo=check-answers", text:
+    "Change", visuallyHiddenText: "volume stored in the last year" }] } } ] })
+    }} {% endif %}
 
     <form method="post" action="{{ basePath }}/check-answers" novalidate>
       {{ govukButton({ text: "Continue" }) }}

@@ -51,7 +51,8 @@ const activityEntry = {
   importing: 'import-products',
   processing: 'process-products',
   selling: 'sell',
-  distributing: 'distribute-products'
+  distributing: 'distribute-products',
+  'storing-only': 'store-only-products'
 }
 const firstActivityEntry = (activities) => {
   for (const a of activities) {
@@ -759,6 +760,52 @@ module.exports = (router) => {
     res.redirect(P + '/check-answers')
   })
 
+  // --- Only storing PPPs journey (Figma 1.3) ------------------------------
+  // products → number of sites → free-text annual volume → check-answers.
+  // (storing-only is exclusive but still uses the common address/contact route.)
+
+  router.post(P + '/store-only-products', (req, res) => {
+    const v = validate([
+      {
+        field: 'store-only-products',
+        message: 'Select what products you store',
+        valid: filled(req.session.data['store-only-products'])
+      }
+    ])
+    if (!v.ok) return res.render(view('store-only-products'), v)
+    const back = consumeReturnTo(req)
+    if (back) return res.redirect(P + '/' + back)
+    res.redirect(P + '/store-only-sites')
+  })
+
+  router.post(P + '/store-only-sites', (req, res) => {
+    const v = validate([
+      {
+        field: 'store-only-sites',
+        message: 'Select the number of sites you are responsible for',
+        valid: filled(req.session.data['store-only-sites'])
+      }
+    ])
+    if (!v.ok) return res.render(view('store-only-sites'), v)
+    const back = consumeReturnTo(req)
+    if (back) return res.redirect(P + '/' + back)
+    res.redirect(P + '/store-only-quantity')
+  })
+
+  router.post(P + '/store-only-quantity', (req, res) => {
+    const v = validate([
+      {
+        field: 'store-only-quantity',
+        message: 'Enter the estimated annual quantity',
+        valid: filled(req.session.data['store-only-quantity'])
+      }
+    ])
+    if (!v.ok) return res.render(view('store-only-quantity'), v)
+    const back = consumeReturnTo(req)
+    if (back) return res.redirect(P + '/' + back)
+    res.redirect(P + '/check-answers')
+  })
+
   // --- Distributing PPPs journey (Figma 1.3) ------------------------------
   // products → number of sites → free-text annual volume → check-answers.
 
@@ -1168,6 +1215,7 @@ module.exports = (router) => {
     if (acts.includes('importing')) cyaBack = '/import-quantity'
     else if (acts.includes('processing')) cyaBack = '/process-quantity'
     else if (acts.includes('distributing')) cyaBack = '/distribute-quantity'
+    else if (acts.includes('storing-only')) cyaBack = '/store-only-quantity'
     else if (acts.includes('manufacturing')) cyaBack = '/manufacture-quantity'
     else if (acts.includes('selling')) {
       cyaBack = sellSellingOnly
