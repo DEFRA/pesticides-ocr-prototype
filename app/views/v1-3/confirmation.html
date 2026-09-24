@@ -1,10 +1,14 @@
-{% extends "layouts/main.html" %} {% set basePath = "/v1-3" %} {% from
-"govuk/components/panel/macro.njk" import govukPanel %} {% set pageName =
-"Registration complete" %} {% block content %}
+{% extends "layouts/main.html" %}
+{% set basePath = "/v1-3" %}
+{% from "govuk/components/panel/macro.njk" import govukPanel %}
+{% set pageName = "Registration complete" %}
+{% block content %}
 <div class="govuk-grid-row">
   <div class="govuk-grid-column-two-thirds">
-    {{ govukPanel({ titleText: "Registration complete", html: "Your reference
-    number<br /><strong>PPP-409-28G</strong>" }) }}
+    {{ govukPanel({
+      titleText: "Registration complete",
+      html: "Your reference number<br /><strong>" + registrationRef + "</strong>"
+    }) }}
 
     <p class="govuk-body">We have sent you a confirmation email.</p>
 
@@ -17,7 +21,7 @@
     <p class="govuk-body">
       You do not need to do anything else. If you selected options for multiple
       activities or premises, they are all covered under this single reference
-      number.
+      number. Keep it for your records.
     </p>
 
     <h2 class="govuk-heading-m">If your details change</h2>
