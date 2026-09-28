@@ -193,13 +193,38 @@ module.exports = (router) => {
   router.post('/address-validate', async (req, res) => {
     const data = req.session.data
     const line1 = data['validate-line-1']
-    const addresses = await findAddresses(data['validate-postcode'])
-    const found = addresses.some((a) =>
-      withoutCommas(a.addressLine)
-        .toLowerCase()
-        .startsWith(withoutCommas(line1).toLowerCase())
-    )
-    const suggestion = found ? undefined : closestAddress(addresses, line1)
-    res.render('address-validate', { found, suggestion })
+    const postcode = data['validate-postcode']
+    const v = validate([
+      {
+        field: 'validate-line-1',
+        message: 'Enter address line 1',
+        valid: filled(line1)
+      },
+      {
+        field: 'validate-postcode',
+        message: 'Enter a postcode',
+        valid: filled(postcode)
+      }
+    ])
+    if (!v.ok) return res.render('address-validate', v)
+
+    // Express 4 doesn't catch errors thrown in async handlers, so anything that
+    // fails here, the API call or an unexpected response shape, would stop the
+    // whole server; show it on the page instead.
+    try {
+      const addresses = await findAddresses(postcode)
+      const found = addresses.some((a) =>
+        withoutCommas(a.addressLine)
+          .toLowerCase()
+          .startsWith(withoutCommas(line1).toLowerCase())
+      )
+      const suggestion = found ? undefined : closestAddress(addresses, line1)
+      res.render('address-validate', { found, suggestion })
+    } catch (err) {
+      console.error('Address validation failed:', err)
+      res.render('address-validate', {
+        serviceError: 'Address checking is not available right now'
+      })
+    }
   })
 }

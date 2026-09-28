@@ -4,6 +4,8 @@
 {% from "govuk/components/fieldset/macro.njk" import govukFieldset %}
 {% from "govuk/components/button/macro.njk" import govukButton %}
 {% from "govuk/components/notification-banner/macro.njk" import govukNotificationBanner %}
+{% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
+{% from "govuk/components/warning-text/macro.njk" import govukWarningText %}
 
 {% set pageName = "Check an address" %}
 {% set backLink = "/" %}
@@ -11,6 +13,20 @@
 {% block content %}
 <div class="govuk-grid-row">
   <div class="govuk-grid-column-two-thirds">
+
+    {% if errorList %}
+      {{ govukErrorSummary({
+        titleText: "There is a problem",
+        errorList: errorList
+      }) }}
+    {% endif %}
+
+    {% if serviceError %}
+      {{ govukWarningText({
+        text: serviceError,
+        iconFallbackText: "Warning"
+      }) }}
+    {% endif %}
 
     {% if found === true %}
       {{ govukNotificationBanner({
@@ -46,6 +62,7 @@
           id: "validate-line-1",
           name: "validate-line-1",
           autocomplete: "address-line1",
+          errorMessage: { text: errors["validate-line-1"] } if errors["validate-line-1"],
           value: data["validate-line-1"]
         }) }}
 
@@ -72,6 +89,7 @@
           name: "validate-postcode",
           classes: "govuk-input--width-10",
           autocomplete: "postal-code",
+          errorMessage: { text: errors["validate-postcode"] } if errors["validate-postcode"],
           value: data["validate-postcode"]
         }) }}
 
