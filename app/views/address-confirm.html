@@ -1,0 +1,69 @@
+{% extends "layouts/main.html" %}
+
+{% from "govuk/components/radios/macro.njk" import govukRadios %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
+
+{% set pageName = "Is this the correct address?" %}
+{% set backLink = "/address-lookup" %}
+
+{% set address = data["address-selected"] %}
+
+{% block content %}
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-full">
+
+    {% if errorList %}
+      {{ govukErrorSummary({
+        titleText: "There is a problem",
+        errorList: errorList
+      }) }}
+    {% endif %}
+
+    <h1 class="govuk-heading-xl">Is this the correct address?</h1>
+
+    <div class="govuk-inset-text">
+      {% for line in address.text.split(", ") %}
+        {# Keep the postcode in capitals #}
+        {{ line if r/^[A-Z]{1,2}\d/.test(line) else line | title }}<br>
+      {% endfor %}
+    </div>
+
+    {% if confirmed %}
+
+      <p class="govuk-body">
+        Address confirmed (UPRN {{ address.value }}).
+      </p>
+
+      <p class="govuk-body">
+        <a class="govuk-link" href="/address-lookup">Look up another address</a>
+      </p>
+
+    {% else %}
+
+      <form method="post" action="/address-confirm" novalidate>
+
+        {{ govukRadios({
+          name: "address-correct",
+          fieldset: {
+            legend: {
+              text: "Is this the correct address?",
+              classes: "govuk-visually-hidden"
+            }
+          },
+          errorMessage: { text: errors["address-correct"] } if errors["address-correct"],
+          items: [
+            { value: "yes", text: "Yes, use this address" },
+            { value: "no", text: "No, search for a different address" }
+          ]
+        }) }}
+
+        {{ govukButton({ text: "Continue" }) }}
+
+      </form>
+
+    {% endif %}
+
+  </div>
+</div>
+{% endblock %}

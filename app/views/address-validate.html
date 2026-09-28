@@ -1,0 +1,86 @@
+{% extends "layouts/main.html" %}
+
+{% from "govuk/components/input/macro.njk" import govukInput %}
+{% from "govuk/components/fieldset/macro.njk" import govukFieldset %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/notification-banner/macro.njk" import govukNotificationBanner %}
+
+{% set pageName = "Check an address" %}
+{% set backLink = "/" %}
+
+{% block content %}
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+
+    {% if found === true %}
+      {{ govukNotificationBanner({
+        type: "success",
+        text: "Address found"
+      }) }}
+    {% elif suggestion %}
+      {% set suggestionHtml %}
+        <p class="govuk-notification-banner__heading">We could not find {{ data["validate-line-1"] }}</p>
+        <p class="govuk-body">Did you mean {{ suggestion }}?</p>
+      {% endset %}
+      {{ govukNotificationBanner({
+        html: suggestionHtml
+      }) }}
+    {% elif found === false %}
+      {{ govukNotificationBanner({
+        text: "Address not found"
+      }) }}
+    {% endif %}
+
+    <form method="post" action="/address-validate" novalidate>
+
+      {% call govukFieldset({
+        legend: {
+          text: "What is the address?",
+          classes: "govuk-fieldset__legend--l",
+          isPageHeading: true
+        }
+      }) %}
+
+        {{ govukInput({
+          label: { text: "Address line 1" },
+          id: "validate-line-1",
+          name: "validate-line-1",
+          autocomplete: "address-line1",
+          value: data["validate-line-1"]
+        }) }}
+
+        {{ govukInput({
+          label: { text: "Address line 2 (optional)" },
+          id: "validate-line-2",
+          name: "validate-line-2",
+          autocomplete: "address-line2",
+          value: data["validate-line-2"]
+        }) }}
+
+        {{ govukInput({
+          label: { text: "Town or city" },
+          id: "validate-town",
+          name: "validate-town",
+          classes: "govuk-!-width-two-thirds",
+          autocomplete: "address-level2",
+          value: data["validate-town"]
+        }) }}
+
+        {{ govukInput({
+          label: { text: "Postcode" },
+          id: "validate-postcode",
+          name: "validate-postcode",
+          classes: "govuk-input--width-10",
+          autocomplete: "postal-code",
+          value: data["validate-postcode"]
+        }) }}
+
+      {% endcall %}
+
+      {{ govukButton({ text: "Check address" }) }}
+
+    </form>
+
+  </div>
+</div>
+{% endblock %}
