@@ -21,6 +21,9 @@ require('./routes/v1-1')(router)
 require('./routes/v1-2')(router)
 require('./routes/v1-3')(router)
 
+// Standalone pages that sit outside the versioned journeys.
+require('./routes/address-lookup')(router)
+
 // Safety net for stray/old URLs.
 //
 // The Prototype Kit's built-in 404 page is broken (it extends a management

@@ -1,0 +1,77 @@
+{% extends "layouts/main.html" %}
+
+{% from "govuk/components/input/macro.njk" import govukInput %}
+{% from "govuk/components/select/macro.njk" import govukSelect %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
+{% from "govuk/components/warning-text/macro.njk" import govukWarningText %}
+
+{% set pageName = "Find an address" %}
+{% set backLink = "/" %}
+
+{% block content %}
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-full">
+
+    {% if errorList %}
+      {{ govukErrorSummary({
+        titleText: "There is a problem",
+        errorList: errorList
+      }) }}
+    {% endif %}
+
+    <h1 class="govuk-heading-xl">Find an address</h1>
+
+    {% if serviceError %}
+      {{ govukWarningText({
+        text: serviceError,
+        iconFallbackText: "Warning"
+      }) }}
+    {% endif %}
+
+    <form method="post" action="/address-lookup" novalidate>
+
+      {{ govukInput({
+        label: { text: "Postcode" },
+        hint: { text: "For example AA3 1AB" },
+        id: "lookup-postcode",
+        name: "lookup-postcode",
+        classes: "govuk-input--width-10",
+        errorMessage: { text: errors["lookup-postcode"] } if errors["lookup-postcode"],
+        value: data["lookup-postcode"]
+      }) }}
+
+      {{ govukInput({
+        label: { text: "Building name or number (optional)" },
+        id: "lookup-building",
+        name: "lookup-building",
+        classes: "govuk-input--width-20",
+        value: data["lookup-building"]
+      }) }}
+
+      {{ govukButton({ text: "Find an address" }) }}
+
+    </form>
+
+    {% if data["lookup-results"] %}
+      <form method="post" action="/address-select" novalidate>
+
+        {{ govukSelect({
+          id: "address-choice",
+          name: "address-choice",
+          label: {
+            text: "Select an address",
+            classes: "govuk-label--m"
+          },
+          errorMessage: { text: errors["address-choice"] } if errors["address-choice"],
+          items: [{ value: "", text: data["lookup-results"] | length + " addresses found" }].concat(data["lookup-results"])
+        }) }}
+
+        {{ govukButton({ text: "Continue" }) }}
+
+      </form>
+    {% endif %}
+
+  </div>
+</div>
+{% endblock %}
