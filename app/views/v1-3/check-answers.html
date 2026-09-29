@@ -85,11 +85,11 @@ endif -%} {%- endif -%} {% endmacro %} {% block content %}
     value: { text: data["contact-telephone"] }, actions: { items: [{ href:
     basePath + "/contact-details?returnTo=check-answers", text: "Change",
     visuallyHiddenText: "contact telephone" }] } }), businessRows) %} {% endif
-    %} {{ govukSummaryList({ rows: businessRows }) }} {# ---- Using PPPs section
+    %} {{ govukSummaryList({ rows: businessRows }) }}
+
+    <h2 class="govuk-heading-m">PPP activity details</h2>
+    {# ---- Using PPPs section
     ---- #} {% if data.activities and "using" in data.activities %}
-    <h2 class="govuk-heading-m">
-      {{ activityLabels["using"] if multiActivity else "PPP activity details" }}
-    </h2>
 
     {% set thirdPartyHtml %}{{ data["third-party-name"] }}<br />{{
     data["third-party-line-1"] }}{% if data["third-party-line-2"] %}<br />{{
@@ -161,10 +161,6 @@ endif -%} {%- endif -%} {% endmacro %} {% block content %}
     govukSummaryList({ rows: pppRows }) }} {% endif %} {# ---- Manufacturing
     PPPs section ---- #} {% if data.activities and "manufacturing" in
     data.activities %}
-    <h2 class="govuk-heading-m">
-      {{ activityLabels["manufacturing"] if multiActivity else "PPP activity
-      details" }}
-    </h2>
 
     {% set manufactureQuantityText %}{% if data["manufacture-quantity"] %}{{
     data["manufacture-quantity"] }} Kgs/litres{% endif %}{% endset %} {{
@@ -182,10 +178,6 @@ endif -%} {%- endif -%} {% endmacro %} {% block content %}
     "Change", visuallyHiddenText: "volume manufactured in the last year" }] } }
     ] }) }} {% endif %} {# ---- Importing PPPs section ---- #} {% if
     data.activities and "importing" in data.activities %}
-    <h2 class="govuk-heading-m">
-      {{ activityLabels["importing"] if multiActivity else "PPP activity
-      details" }}
-    </h2>
 
     {% set importStoringText %}{{ data["import-storing"] }}{% if
     importStoreOwnSites and importStoringWhereText %}<br />{{
@@ -231,10 +223,6 @@ endif -%} {%- endif -%} {% endmacro %} {% block content %}
     %} {{ govukSummaryList({ rows: importRows }) }} {% endif %} {# ----
     Processing PPPs section ---- #} {% if data.activities and "processing" in
     data.activities %}
-    <h2 class="govuk-heading-m">
-      {{ activityLabels["processing"] if multiActivity else "PPP activity
-      details" }}
-    </h2>
 
     {% set processQuantityText %}{% if data["process-quantity"] %}{{
     data["process-quantity"] }} Kgs/litres{% endif %}{% endset %} {{
@@ -251,10 +239,6 @@ endif -%} {%- endif -%} {% endmacro %} {% block content %}
     visuallyHiddenText: "volume processed in the last year" }] } } ] }) }} {%
     endif %} {# ---- Selling PPPs section ---- #} {% if data.activities and
     "selling" in data.activities %}
-    <h2 class="govuk-heading-m">
-      {{ activityLabels["selling"] if multiActivity else "PPP activity details"
-      }}
-    </h2>
 
     {% set sellProVolText %}{% if data["sell-pro-quantity"] %}{{
     data["sell-pro-quantity"] }} kg/l{% endif %}{% endset %} {% set
@@ -285,10 +269,6 @@ endif -%} {%- endif -%} {% endmacro %} {% block content %}
     endif %} {{ govukSummaryList({ rows: sellRows }) }} {% endif %} {# ----
     Distributing PPPs section ---- #} {% if data.activities and "distributing"
     in data.activities %}
-    <h2 class="govuk-heading-m">
-      {{ activityLabels["distributing"] if multiActivity else "PPP activity
-      details" }}
-    </h2>
 
     {% set distributeQuantityText %}{% if data["distribute-quantity"] %}{{
     data["distribute-quantity"] }} Kgs/litres{% endif %}{% endset %} {{
@@ -306,10 +286,6 @@ endif -%} {%- endif -%} {% endmacro %} {% block content %}
     "Change", visuallyHiddenText: "volume distributed in the last year" }] } } ]
     }) }} {% endif %} {# ---- Only storing PPPs section ---- #} {% if
     data.activities and "storing-only" in data.activities %}
-    <h2 class="govuk-heading-m">
-      {{ activityLabels["storing-only"] if multiActivity else "PPP activity
-      details" }}
-    </h2>
 
     {% set storeOnlyQuantityText %}{% if data["store-only-quantity"] %}{{
     data["store-only-quantity"] }} Kgs/litres{% endif %}{% endset %} {{

@@ -113,6 +113,10 @@ const lastPageOfActivity = (act, d) => {
   }[act]
 }
 
+// Confirmation: the whole registration is covered by ONE reference number,
+// however many activities were selected (sample ref — prototype only, for UR).
+const REGISTRATION_REF = 'PPP-409-28G'
+
 module.exports = (router) => {
   // Bare version root → the version's start page. Without this, /v1-2 has no
   // matching view and hits the Prototype Kit's (broken) built-in 404 page.
@@ -1344,9 +1348,6 @@ module.exports = (router) => {
     const lastAct = flowActs[flowActs.length - 1]
     res.render(view('check-answers'), {
       cyaBack: P + (lastPage[lastAct] || '/quantity'),
-      // With more than one activity, title each section with its activity name
-      // (a single activity keeps the "PPP activity details" heading per Figma).
-      multiActivity: flowActs.length > 1,
       // Resolved "where do you store" label lines (kept out of the template so
       // the formatter can't split the multi-word map keys used for lookup)
       usingStoringWhereText:
@@ -1391,4 +1392,10 @@ module.exports = (router) => {
   router.post(P + '/check-answers', (req, res) =>
     res.redirect(P + '/confirmation')
   )
+
+  // Confirmation — one "Registration complete" panel with a single reference
+  // number covering the whole registration, however many activities were selected.
+  router.get(P + '/confirmation', (req, res) => {
+    res.render(view('confirmation'), { registrationRef: REGISTRATION_REF })
+  })
 }
