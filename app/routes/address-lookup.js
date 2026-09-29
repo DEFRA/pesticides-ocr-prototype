@@ -13,52 +13,37 @@ const SEARCH_FIELDS = [
 
 const clearSearch = (data) => SEARCH_FIELDS.forEach((f) => delete data[f])
 
-// The access token is cached in memory and replaced a minute before it expires.
-const EXPIRY_MARGIN_MS = 60 * 1000
-const tokenCache = { token: null, expiresAt: 0 }
-
-const fetchAccessToken = async () => {
-  const response = await fetch(process.env.OS_NAMES_TOKEN_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({
-      grant_type: 'client_credentials',
-      scope: process.env.OS_NAMES_SCOPE,
-      client_id: process.env.OS_NAMES_CLIENT_ID,
-      client_secret: process.env.OS_NAMES_CLIENT_SECRET
-    })
-  })
-  if (!response.ok) {
-    throw new Error('the token endpoint returned ' + response.status)
-  }
-  const body = await response.json()
-  tokenCache.token = body.access_token
-  tokenCache.expiresAt = Date.now() + body.expires_in * 1000 - EXPIRY_MARGIN_MS
-  return tokenCache.token
+// Includes the response body in the error so the log shows why it failed.
+const failedResponse = async (response) => {
+  const body = await response.text().catch(() => '')
+  return new Error('the API returned ' + response.status + ': ' + body)
 }
 
-const getAccessToken = () =>
-  tokenCache.token && Date.now() < tokenCache.expiresAt
-    ? tokenCache.token
-    : fetchAccessToken()
-
-const fetchAddresses = (postcode, token) =>
-  fetch(
-    process.env.OS_NAMES_API_URL + '?postcode=' + encodeURIComponent(postcode),
-    { headers: { Authorization: 'Bearer ' + token } }
-  )
-
+// OS Places postcode search:
+// https://docs.os.uk/os-apis/accessing-os-apis/os-places-api
 const findAddresses = async (postcode) => {
-  let response = await fetchAddresses(postcode, await getAccessToken())
-  // 401 = token rejected early, so get a new one and try once more.
-  if (response.status === 401) {
-    response = await fetchAddresses(postcode, await fetchAccessToken())
+  for (const name of ['OS_API_URL', 'OS_API_KEY']) {
+    if (!process.env[name]) throw new Error(name + ' is not set')
   }
-  // 204 = nothing at that postcode 400 = not a postcode.
-  if (response.status === 204 || response.status === 400) return []
-  if (!response.ok) throw new Error('the API returned ' + response.status)
+  const response = await fetch(
+    process.env.OS_API_URL +
+      '?postcode=' +
+      encodeURIComponent(postcode) +
+      '&key=' +
+      encodeURIComponent(process.env.OS_API_KEY)
+  )
+  // 400 = not a postcode.
+  if (response.status === 400) return []
+  if (!response.ok) throw await failedResponse(response)
   const body = await response.json()
-  return body.results
+  // results is left out when nothing is at that postcode.
+  return (body.results || []).map(({ DPA }) => ({
+    uprn: DPA.UPRN,
+    addressLine: DPA.ADDRESS,
+    buildingNumber: DPA.BUILDING_NUMBER,
+    buildingName: DPA.BUILDING_NAME,
+    subBuildingName: DPA.SUB_BUILDING_NAME
+  }))
 }
 
 const matchesBuilding = (address, building) =>
@@ -81,6 +66,11 @@ const closestAddress = (addresses, line1) => {
   const [best] = fuse.search(line1)
   return best && best.item.addressLine
 }
+
+// Shown in the error summary at the top of the page.
+const serviceError = (err) => ({
+  errorList: [{ text: 'Address lookup failed: ' + err.message }]
+})
 
 const renderLookup = (res, data, locals) =>
   res.render('address-lookup', { data: { ...data }, ...locals })
@@ -120,9 +110,8 @@ module.exports = (router) => {
     try {
       addresses = await findAddresses(postcode)
     } catch (err) {
-      return renderLookup(res, data, {
-        serviceError: 'Address lookup failed: ' + err.message
-      })
+      console.error('Address lookup failed for postcode ' + postcode, err)
+      return renderLookup(res, data, serviceError(err))
     }
 
     if (filled(building)) {
@@ -144,7 +133,7 @@ module.exports = (router) => {
 
     data['lookup-results'] = addresses.map((a) => ({
       value: a.uprn,
-      text: a.addressLine + ', ' + a.country
+      text: a.addressLine
     }))
 
     if (addresses.length === 1) {
@@ -193,7 +182,16 @@ module.exports = (router) => {
   router.post('/address-validate', async (req, res) => {
     const data = req.session.data
     const line1 = data['validate-line-1']
-    const addresses = await findAddresses(data['validate-postcode'])
+    let addresses
+    try {
+      addresses = await findAddresses(data['validate-postcode'])
+    } catch (err) {
+      console.error(
+        'Address validation failed for postcode ' + data['validate-postcode'],
+        err
+      )
+      return res.render('address-validate', serviceError(err))
+    }
     const found = addresses.some((a) =>
       withoutCommas(a.addressLine)
         .toLowerCase()
