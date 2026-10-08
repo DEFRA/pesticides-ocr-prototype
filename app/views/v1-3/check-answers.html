@@ -187,7 +187,7 @@ endif -%} {%- endif -%} {% endmacro %} {% block content %}
     }}<br />{{ data["import-store-postcode"] }}{% endif %}{% endif %}{% endset
     %} {% set importStoreDetailsHref = (basePath +
     "/import-store-3rd-party-contact") if importStoreThirdParty else (basePath +
-    "/import-store-own-address-lookup") %} {% set importQuantityText %}{% if
+    "/import-store-own-address-search") %} {% set importQuantityText %}{% if
     data["import-quantity"] %}{{ data["import-quantity"] }} Kgs/litres{% endif
     %}{% endset %} {% set importRows = [] %} {% set importRows =
     (importRows.push({ key: { text: "What products do you import?" }, value: {
@@ -203,12 +203,6 @@ endif -%} {%- endif -%} {% endmacro %} {% block content %}
     html: importStoreDetailsHtml }, actions: { items: [{ href:
     importStoreDetailsHref + "?returnTo=check-answers", text: "Change",
     visuallyHiddenText: "PPP store details" }] } }), importRows) %} {% endif %}
-    {% if importStoreOwnDifferent %} {% set importRows = (importRows.push({ key:
-    { text: "Quantity of PPPs or adjuvants imported in a typical year" },
-    value: { text: data["import-quantity-band"] }, actions: { items: [{ href:
-    basePath + "/import-quantity-band?returnTo=check-answers", text: "Change",
-    visuallyHiddenText: "quantity of PPPs or adjuvants imported" }] } }),
-    importRows) %} {% endif %}
     {% set importRows = (importRows.push({ key: { text: "Volume of PPPs
     imported in the last year" }, value: { text: importQuantityText | trim },
     actions: { items: [{ href: basePath +
