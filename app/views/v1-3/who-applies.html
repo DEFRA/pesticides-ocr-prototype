@@ -13,14 +13,10 @@ entryBackLink or (basePath + "/contact-details") %} {% block content %}
       {{ govukRadios({ name: "who-applies", errorMessage: { text:
       errors["who-applies"] } if errors["who-applies"], fieldset: { legend: {
       text: "Who applies PPPs for your organisation?", isPageHeading: true,
-      classes: "govuk-fieldset__legend--l" } }, hint: { text: "Select all that
-      apply" }, items: [ { value: "We apply PPPs ourselves or on behalf of other
-      organisations", text: "We apply PPPs ourselves or on behalf of other
-      organisations", checked: checked("who-applies", "We apply PPPs ourselves
-      or on behalf of other organisations") }, { value: "Another organisation
-      applies PPPs on our behalf", text: "Another organisation applies PPPs on
-      our behalf", checked: checked("who-applies", "Another organisation applies
-      PPPs on our behalf") } ] }) }} {{ govukButton({ text: "Continue" }) }}
+      classes: "govuk-fieldset__legend--l" } }, items: [
+        { value: "We apply PPPs ourselves or on behalf of other organisations", text: "We apply PPPs ourselves or on behalf of other organisations", checked: checked("who-applies", "We apply PPPs ourselves or on behalf of other organisations") },
+        { value: "Another organisation applies PPPs on our behalf", text: "Another organisation applies PPPs on our behalf", checked: checked("who-applies", "Another organisation applies PPPs on our behalf") }
+      ] }) }} {{ govukButton({ text: "Continue" }) }}
     </form>
   </div>
 </div>

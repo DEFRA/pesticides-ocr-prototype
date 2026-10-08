@@ -12,7 +12,7 @@ pageName = "Additional business addresses" %} {% set backLink = basePath +
     {% if errorList %}{{ govukErrorSummary({ titleText: "There is a problem",
     errorList: errorList }) }}{% endif %}
 
-    <h1 class="govuk-heading-xl">Additional business addresses</h1>
+    <h1 class="govuk-heading-l govuk-!-margin-bottom-4">Additional business addresses</h1>
 
     {% for address in data.additionalAddresses %} {% set i = loop.index %} {%
     set addressHtml %} {{ address.line1 }}{% if address.line2 %}<br />{{

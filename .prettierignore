@@ -4,3 +4,5 @@ coverage
 .tmp/
 .env
 migrate.log
+# Reflowing views can split radio values across lines, which breaks routing
+app/views/**/*.html

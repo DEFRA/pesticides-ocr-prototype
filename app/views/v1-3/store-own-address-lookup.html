@@ -9,7 +9,11 @@ basePath + "/storing-where" %} {% block content %}
     {% if errorList %}{{ govukErrorSummary({ titleText: "There is a problem",
     errorList: errorList }) }}{% endif %}
 
-    <h1 class="govuk-heading-xl">What is the location where you store PPPs?</h1>
+    <h1 class="govuk-heading-l govuk-!-margin-bottom-0">What is the location where you store PPPs?</h1>
+    <p class="govuk-hint">
+      Provide the address details for the location that is not your main
+      business address.
+    </p>
 
     <form
       method="post"
