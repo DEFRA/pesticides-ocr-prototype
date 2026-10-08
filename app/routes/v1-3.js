@@ -1234,9 +1234,9 @@ module.exports = (router) => {
   // prose and can insert newlines inside string literals, which silently breaks
   // in-template string comparisons; computing the flags here avoids that.
   const STORING_WHERE_LABEL = {
-    'Main business address': 'At main business address',
+    'Main business address': 'Only at the main business address',
     'A different location to the main business address':
-      'At a different location'
+      'At the main business address and other locations'
   }
   router.get(P + '/check-answers', (req, res) => {
     const d = req.session.data || {}
