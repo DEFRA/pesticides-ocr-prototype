@@ -70,7 +70,9 @@ const activityDone = (act, d) => {
     case 'storing-only':
       return filled(d['store-only-quantity'])
     case 'selling':
-      return filled(d['sell-pro-sites']) || filled(d['sell-amateur-quantity'])
+      return (
+        filled(d['sell-pro-quantity']) || filled(d['sell-amateur-quantity'])
+      )
     default:
       return true
   }
@@ -100,7 +102,7 @@ const entryActivity = Object.fromEntries(
 const lastPageOfActivity = (act, d) => {
   if (act === 'selling') {
     return d['sell-use-type'] === 'Mostly professional use'
-      ? 'sell-pro-sites'
+      ? 'sell-pro-quantity'
       : 'sell-amateur-quantity'
   }
   return {
@@ -501,8 +503,8 @@ module.exports = (router) => {
     )
   })
 
-  // Do you store products you apply? Branch: own sites → where; 3rd party → how
-  // many sites; don't store → skip storage details (on to quantity).
+  // Do you store products you apply? Branch: own sites → where; 3rd party →
+  // contact; don't store → quantity.
   router.post(P + '/store-applied', (req, res) => {
     const answer = req.session.data['store-applied']
     const v = validate([
@@ -524,7 +526,7 @@ module.exports = (router) => {
     res.redirect(P + '/quantity')
   })
 
-  // Third-party storage contact → how many sites.
+  // Third-party storage contact → quantity.
   router.post(P + '/store-3rd-party-contact', (req, res) => {
     const d = req.session.data
     const v = validate([
@@ -552,11 +554,11 @@ module.exports = (router) => {
     if (!v.ok) return res.render(view('store-3rd-party-contact'), v)
     const back = consumeReturnTo(req)
     if (back) return res.redirect(P + '/' + back)
-    res.redirect(P + '/store-sites')
+    res.redirect(P + '/quantity')
   })
 
-  // Where do you store? Main address → how many sites; different location →
-  // storage address lookup.
+  // Where do you store? Main address → quantity; different location → storage
+  // address lookup.
   router.post(P + '/storing-where', (req, res) => {
     const answer = req.session.data['storing-where']
     const v = validate([
@@ -570,28 +572,12 @@ module.exports = (router) => {
     const back = consumeReturnTo(req)
     if (back) return res.redirect(P + '/' + back)
     if (answer === 'Main business address') {
-      return res.redirect(P + '/store-sites')
+      return res.redirect(P + '/quantity')
     }
     res.redirect(P + '/store-own-address-lookup')
   })
 
-  // How many storage sites → quantity.
-  router.post(P + '/store-sites', (req, res) => {
-    const v = validate([
-      {
-        field: 'store-sites',
-        message: 'Select the number of sites you are responsible for',
-        valid: filled(req.session.data['store-sites'])
-      }
-    ])
-    if (!v.ok) return res.render(view('store-sites'), v)
-    const back = consumeReturnTo(req)
-    if (back) return res.redirect(P + '/' + back)
-    res.redirect(P + '/quantity')
-  })
-
-  // Storage location lookup (own, different location) → how many sites.
-  // "Enter an address manually" links straight to store-sites for now.
+  // Storage location lookup (own, different location) → address result.
   router.post(P + '/store-own-address-lookup', (req, res) => {
     const v = validate([
       {
@@ -606,7 +592,7 @@ module.exports = (router) => {
     res.redirect(P + '/store-own-address-result')
   })
 
-  // Storage location entered manually → how many sites.
+  // Storage location entered manually → quantity.
   router.post(P + '/store-own-address-manual', (req, res) => {
     const d = req.session.data
     const v = validate([
@@ -634,11 +620,11 @@ module.exports = (router) => {
     if (!v.ok) return res.render(view('store-own-address-manual'), v)
     const back = consumeReturnTo(req)
     if (back) return res.redirect(P + '/' + back)
-    res.redirect(P + '/store-sites')
+    res.redirect(P + '/quantity')
   })
 
   // --- Manufacturing PPPs journey (Figma 1.3) -----------------------------
-  // products → number of sites → quantity band → check-answers.
+  // products → quantity band → check-answers.
 
   router.post(P + '/manufacture-products', (req, res) => {
     const v = validate([
@@ -649,20 +635,6 @@ module.exports = (router) => {
       }
     ])
     if (!v.ok) return res.render(view('manufacture-products'), v)
-    const back = consumeReturnTo(req)
-    if (back) return res.redirect(P + '/' + back)
-    res.redirect(P + '/manufacture-sites')
-  })
-
-  router.post(P + '/manufacture-sites', (req, res) => {
-    const v = validate([
-      {
-        field: 'manufacture-sites',
-        message: 'Select the number of sites you are responsible for',
-        valid: filled(req.session.data['manufacture-sites'])
-      }
-    ])
-    if (!v.ok) return res.render(view('manufacture-sites'), v)
     const back = consumeReturnTo(req)
     if (back) return res.redirect(P + '/' + back)
     res.redirect(P + '/manufacture-quantity')
@@ -687,7 +659,7 @@ module.exports = (router) => {
   })
 
   // --- Selling PPPs journey (Figma 1.3) -----------------------------------
-  // PPP use type splits into a professional branch (products → quantity → sites)
+  // PPP use type splits into a professional branch (products → quantity)
   // and an amateur branch (quantity → …). Selling-only additionally collects the
   // head-office address and contact within this flow. (Downstream pages are wired
   // as the remaining Sell screens land.)
@@ -756,20 +728,6 @@ module.exports = (router) => {
       }
     ])
     if (!v.ok) return res.render(view('sell-pro-quantity'), v)
-    const back = consumeReturnTo(req)
-    if (back) return res.redirect(P + '/' + back)
-    res.redirect(P + '/sell-pro-sites')
-  })
-
-  router.post(P + '/sell-pro-sites', (req, res) => {
-    const v = validate([
-      {
-        field: 'sell-pro-sites',
-        message: 'Select the number of sites you are responsible for',
-        valid: filled(req.session.data['sell-pro-sites'])
-      }
-    ])
-    if (!v.ok) return res.render(view('sell-pro-sites'), v)
     const back = consumeReturnTo(req)
     if (back) return res.redirect(P + '/' + back)
     // Selling-only collects the head office address + contact within this flow.
@@ -865,7 +823,7 @@ module.exports = (router) => {
   })
 
   // --- Only storing PPPs journey (Figma 1.3) ------------------------------
-  // products → number of sites → free-text annual volume → check-answers.
+  // products → free-text annual volume → check-answers.
   // (storing-only is exclusive but still uses the common address/contact route.)
 
   router.post(P + '/store-only-products', (req, res) => {
@@ -877,20 +835,6 @@ module.exports = (router) => {
       }
     ])
     if (!v.ok) return res.render(view('store-only-products'), v)
-    const back = consumeReturnTo(req)
-    if (back) return res.redirect(P + '/' + back)
-    res.redirect(P + '/store-only-sites')
-  })
-
-  router.post(P + '/store-only-sites', (req, res) => {
-    const v = validate([
-      {
-        field: 'store-only-sites',
-        message: 'Select the number of sites you are responsible for',
-        valid: filled(req.session.data['store-only-sites'])
-      }
-    ])
-    if (!v.ok) return res.render(view('store-only-sites'), v)
     const back = consumeReturnTo(req)
     if (back) return res.redirect(P + '/' + back)
     res.redirect(P + '/store-only-quantity')
@@ -915,7 +859,7 @@ module.exports = (router) => {
   })
 
   // --- Distributing PPPs journey (Figma 1.3) ------------------------------
-  // products → number of sites → free-text annual volume → check-answers.
+  // products → free-text annual volume → check-answers.
 
   router.post(P + '/distribute-products', (req, res) => {
     const v = validate([
@@ -926,20 +870,6 @@ module.exports = (router) => {
       }
     ])
     if (!v.ok) return res.render(view('distribute-products'), v)
-    const back = consumeReturnTo(req)
-    if (back) return res.redirect(P + '/' + back)
-    res.redirect(P + '/distribute-sites')
-  })
-
-  router.post(P + '/distribute-sites', (req, res) => {
-    const v = validate([
-      {
-        field: 'distribute-sites',
-        message: 'Select the number of sites you are responsible for',
-        valid: filled(req.session.data['distribute-sites'])
-      }
-    ])
-    if (!v.ok) return res.render(view('distribute-sites'), v)
     const back = consumeReturnTo(req)
     if (back) return res.redirect(P + '/' + back)
     res.redirect(P + '/distribute-quantity')
@@ -964,7 +894,7 @@ module.exports = (router) => {
   })
 
   // --- Processing PPPs journey (Figma 1.3) --------------------------------
-  // products → number of sites → free-text annual volume → check-answers.
+  // products → free-text annual volume → check-answers.
 
   router.post(P + '/process-products', (req, res) => {
     const v = validate([
@@ -975,20 +905,6 @@ module.exports = (router) => {
       }
     ])
     if (!v.ok) return res.render(view('process-products'), v)
-    const back = consumeReturnTo(req)
-    if (back) return res.redirect(P + '/' + back)
-    res.redirect(P + '/process-sites')
-  })
-
-  router.post(P + '/process-sites', (req, res) => {
-    const v = validate([
-      {
-        field: 'process-sites',
-        message: 'Select the number of sites you are responsible for',
-        valid: filled(req.session.data['process-sites'])
-      }
-    ])
-    if (!v.ok) return res.render(view('process-sites'), v)
     const back = consumeReturnTo(req)
     if (back) return res.redirect(P + '/' + back)
     res.redirect(P + '/process-quantity')
@@ -1052,7 +968,7 @@ module.exports = (router) => {
     res.redirect(P + '/import-quantity')
   })
 
-  // Third-party storage contact (import) → how many sites.
+  // Third-party storage contact (import) → quantity.
   router.post(P + '/import-store-3rd-party-contact', (req, res) => {
     const d = req.session.data
     const v = validate([
@@ -1075,11 +991,11 @@ module.exports = (router) => {
     if (!v.ok) return res.render(view('import-store-3rd-party-contact'), v)
     const back = consumeReturnTo(req)
     if (back) return res.redirect(P + '/' + back)
-    res.redirect(P + '/import-store-sites')
+    res.redirect(P + '/import-quantity')
   })
 
-  // Where do you store? Main address → how many sites; different location →
-  // storage address lookup.
+  // Where do you store? Main address → quantity; other locations → quantity
+  // band → storage address lookup.
   router.post(P + '/import-storing-where', (req, res) => {
     const answer = req.session.data['import-storing-where']
     const v = validate([
@@ -1093,24 +1009,23 @@ module.exports = (router) => {
     const back = consumeReturnTo(req)
     if (back) return res.redirect(P + '/' + back)
     if (answer === 'Main business address') {
-      return res.redirect(P + '/import-store-sites')
+      return res.redirect(P + '/import-quantity')
     }
-    res.redirect(P + '/import-store-own-address-lookup')
+    res.redirect(P + '/import-quantity-band')
   })
 
-  // How many storage sites (import) → quantity.
-  router.post(P + '/import-store-sites', (req, res) => {
+  router.post(P + '/import-quantity-band', (req, res) => {
     const v = validate([
       {
-        field: 'import-store-sites',
-        message: 'Select the number of sites you are responsible for',
-        valid: filled(req.session.data['import-store-sites'])
+        field: 'import-quantity-band',
+        message: 'Select the quantity range that best matches what you import',
+        valid: filled(req.session.data['import-quantity-band'])
       }
     ])
-    if (!v.ok) return res.render(view('import-store-sites'), v)
+    if (!v.ok) return res.render(view('import-quantity-band'), v)
     const back = consumeReturnTo(req)
     if (back) return res.redirect(P + '/' + back)
-    res.redirect(P + '/import-quantity')
+    res.redirect(P + '/import-store-own-address-lookup')
   })
 
   // Storage location lookup intro (own, different location): "Find an address" →
@@ -1134,7 +1049,7 @@ module.exports = (router) => {
     res.redirect(P + '/import-store-own-address-result')
   })
 
-  // Storage location entered manually → how many sites.
+  // Storage location entered manually → quantity.
   router.post(P + '/import-store-own-address-manual', (req, res) => {
     const d = req.session.data
     const v = validate([
@@ -1162,7 +1077,7 @@ module.exports = (router) => {
     if (!v.ok) return res.render(view('import-store-own-address-manual'), v)
     const back = consumeReturnTo(req)
     if (back) return res.redirect(P + '/' + back)
-    res.redirect(P + '/import-store-sites')
+    res.redirect(P + '/import-quantity')
   })
 
   // Quantity (import, free-text) → the combined check-answers.
@@ -1318,7 +1233,6 @@ module.exports = (router) => {
   // comparisons live in JS. The formatter reflows nunjucks {% set %} blocks like
   // prose and can insert newlines inside string literals, which silently breaks
   // in-template string comparisons; computing the flags here avoids that.
-  const NO_STORE = "No, we don't store PPPs"
   const STORING_WHERE_LABEL = {
     'Main business address': 'At main business address',
     'A different location to the main business address':
@@ -1341,7 +1255,7 @@ module.exports = (router) => {
       selling: sellSellingOnly
         ? '/sell-amateur-contact-details'
         : sellPro
-          ? '/sell-pro-sites'
+          ? '/sell-pro-quantity'
           : '/sell-amateur-quantity'
     }
     const flowActs = acts.filter((a) => activityEntry[a])
@@ -1368,8 +1282,6 @@ module.exports = (router) => {
         d['store-applied'] === 'Yes, at sites we own' &&
         d['storing-where'] ===
           'A different location to the main business address',
-      usingShowStorageSites:
-        !!d['store-applied'] && d['store-applied'] !== NO_STORE,
       // Importing PPPs section
       importStoreOwnSites: d['import-storing'] === 'Yes, at sites we own',
       importStoreThirdParty:
@@ -1378,8 +1290,6 @@ module.exports = (router) => {
         d['import-storing'] === 'Yes, at sites we own' &&
         d['import-storing-where'] ===
           'A different location to the main business address',
-      importShowStorageSites:
-        !!d['import-storing'] && d['import-storing'] !== NO_STORE,
       // Selling PPPs section. Selling-only collected the head-office address +
       // contact in the Sell flow, so business-details shows those, not the common
       // ones.

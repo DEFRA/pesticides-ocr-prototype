@@ -15,12 +15,10 @@ basePath + "/import-storing" %} {% block content %}
       fieldset: { legend: { text: "Where do you store products you import?",
       isPageHeading: true, classes: "govuk-fieldset__legend--l" } }, hint: {
       text: "Select an option" }, items: [ { value: "Main business address",
-      text: "At " + (data["address-line-1"] or "the main business address"),
+      text: "Only at the main business address",
       checked: checked("import-storing-where", "Main business address") }, {
-      value: "A different location to the main business address", text: "A
-      different location to the main business address", checked:
-      checked("import-storing-where", "A different location to the main business
-      address") } ] }) }} {{ govukButton({ text: "Continue" }) }}
+      value: "A different location to the main business address", text: "At the main business address and other locations", checked:
+      checked("import-storing-where", "A different location to the main business address") } ] }) }} {{ govukButton({ text: "Continue" }) }}
     </form>
   </div>
 </div>
