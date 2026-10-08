@@ -3,13 +3,17 @@
 "govuk/components/button/macro.njk" import govukButton %} {% from
 "govuk/components/error-summary/macro.njk" import govukErrorSummary %} {% set
 pageName = "What is the location where you store PPPs?" %} {% set backLink =
-basePath + "/import-store-own-address-lookup" %} {% block content %}
+basePath + "/import-storing-where" %} {% block content %}
 <div class="govuk-grid-row">
   <div class="govuk-grid-column-two-thirds">
     {% if errorList %}{{ govukErrorSummary({ titleText: "There is a problem",
     errorList: errorList }) }}{% endif %}
 
-    <h1 class="govuk-heading-l govuk-!-margin-bottom-4">What is the location where you store PPPs?</h1>
+    <h1 class="govuk-heading-l govuk-!-margin-bottom-0">What is the location where you store PPPs?</h1>
+    <p class="govuk-hint">
+      Provide the address details for the location that is not your main
+      business address.
+    </p>
 
     <form
       method="post"

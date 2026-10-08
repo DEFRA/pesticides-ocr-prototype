@@ -994,8 +994,8 @@ module.exports = (router) => {
     res.redirect(P + '/import-quantity')
   })
 
-  // Where do you store? Main address → quantity; other locations → quantity
-  // band → storage address lookup.
+  // Where do you store? Main address → quantity; other locations → storage
+  // address search.
   router.post(P + '/import-storing-where', (req, res) => {
     const answer = req.session.data['import-storing-where']
     const v = validate([
@@ -1011,28 +1011,8 @@ module.exports = (router) => {
     if (answer === 'Main business address') {
       return res.redirect(P + '/import-quantity')
     }
-    res.redirect(P + '/import-quantity-band')
-  })
-
-  router.post(P + '/import-quantity-band', (req, res) => {
-    const v = validate([
-      {
-        field: 'import-quantity-band',
-        message: 'Select the quantity range that best matches what you import',
-        valid: filled(req.session.data['import-quantity-band'])
-      }
-    ])
-    if (!v.ok) return res.render(view('import-quantity-band'), v)
-    const back = consumeReturnTo(req)
-    if (back) return res.redirect(P + '/' + back)
-    res.redirect(P + '/import-store-own-address-lookup')
-  })
-
-  // Storage location lookup intro (own, different location): "Find an address" →
-  // the postcode search page; "enter manually" links straight to the manual page.
-  router.post(P + '/import-store-own-address-lookup', (req, res) =>
     res.redirect(P + '/import-store-own-address-search')
-  )
+  })
 
   // Storage location postcode search → results.
   router.post(P + '/import-store-own-address-search', (req, res) => {
