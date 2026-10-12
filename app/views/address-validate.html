@@ -54,6 +54,7 @@
           id: "validate-line-1",
           name: "validate-line-1",
           autocomplete: "address-line1",
+          errorMessage: { text: errors["validate-line-1"] } if errors["validate-line-1"],
           value: data["validate-line-1"]
         }) }}
 
@@ -80,6 +81,7 @@
           name: "validate-postcode",
           classes: "govuk-input--width-10",
           autocomplete: "postal-code",
+          errorMessage: { text: errors["validate-postcode"] } if errors["validate-postcode"],
           value: data["validate-postcode"]
         }) }}
 

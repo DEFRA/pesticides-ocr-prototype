@@ -182,6 +182,19 @@ module.exports = (router) => {
   router.post('/address-validate', async (req, res) => {
     const data = req.session.data
     const line1 = data['validate-line-1']
+    const v = validate([
+      {
+        field: 'validate-line-1',
+        message: 'Enter address line 1',
+        valid: filled(line1)
+      },
+      {
+        field: 'validate-postcode',
+        message: 'Enter a postcode',
+        valid: filled(data['validate-postcode'])
+      }
+    ])
+    if (!v.ok) return res.render('address-validate', v)
     let addresses
     try {
       addresses = await findAddresses(data['validate-postcode'])
