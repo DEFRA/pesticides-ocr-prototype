@@ -14,13 +14,9 @@ backLink = basePath + "/sell" %} {% block content %}
       errors["sell-pro-products"] } if errors["sell-pro-products"], fieldset: {
       legend: { text: "What products do you sell in England, Scotland or
       Wales?", isPageHeading: true, classes: "govuk-fieldset__legend--l" } },
-      hint: { text: "Select an option" }, items: [ { value: "Plant protection
-      products (PPPs) only", text: "Plant protection products (PPPs) only",
-      checked: checked("sell-pro-products", "Plant protection products (PPPs)
-      only") }, { value: "Ingredients and adjuvants only", text: "Ingredients
-      and adjuvants only", checked: checked("sell-pro-products", "Ingredients
-      and adjuvants only") }, { value: "Both PPPs and ingredients and
-      adjuvants", text: "Both PPPs and ingredients and adjuvants", checked:
+      hint: { text: "Select an option" }, items: [ { value: "Plant protection products (PPPs) only", text: "Plant protection products (PPPs) only",
+      checked: checked("sell-pro-products", "Plant protection products (PPPs) only") }, { value: "Ingredients and adjuvants only", text: "Ingredients
+      and adjuvants only", checked: checked("sell-pro-products", "Ingredients and adjuvants only") }, { value: "Both PPPs and ingredients and adjuvants", text: "Both PPPs and ingredients and adjuvants", checked:
       checked("sell-pro-products", "Both PPPs and ingredients and adjuvants") }
       ] }) }} {{ govukButton({ text: "Continue" }) }}
     </form>

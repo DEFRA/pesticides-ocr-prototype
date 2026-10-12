@@ -14,12 +14,8 @@ basePath + "/store-applied" %} {% block content %}
       errors["storing-where"] } if errors["storing-where"], fieldset: { legend:
       { text: "Where do you store products you apply?", isPageHeading: true,
       classes: "govuk-fieldset__legend--l" } }, hint: { text: "Select an option"
-      }, items: [ { value: "Main business address", text: "At " +
-      (data["address-line-1"] or "main business address"), checked:
-      checked("storing-where", "Main business address") }, { value: "A different
-      location to the main business address", text: "A different location to the
-      main business address", checked: checked("storing-where", "A different
-      location to the main business address") } ] }) }} {{ govukButton({ text:
+      }, items: [ { value: "Main business address", text: "Only at the main business address", checked:
+      checked("storing-where", "Main business address") }, { value: "A different location to the main business address", text: "At the main business address and other locations", checked: checked("storing-where", "A different location to the main business address") } ] }) }} {{ govukButton({ text:
       "Continue" }) }}
     </form>
   </div>

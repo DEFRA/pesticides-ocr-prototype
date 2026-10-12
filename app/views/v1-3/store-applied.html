@@ -17,8 +17,7 @@ pageName = "Do you store products you apply?" %} {% set backLink = basePath +
       items: [ { value: "Yes, at sites we own", text: "Yes, at sites we own",
       checked: checked("store-applied", "Yes, at sites we own") }, { value:
       "Yes, a third party stores them for us", text: "Yes, a third party stores
-      them for us", checked: checked("store-applied", "Yes, a third party stores
-      them for us") }, { value: "No, we don't store PPPs", text: "No, we don't
+      them for us", checked: checked("store-applied", "Yes, a third party stores them for us") }, { value: "No, we don't store PPPs", text: "No, we don't
       store PPPs", checked: checked("store-applied", "No, we don't store PPPs")
       } ] }) }} {{ govukButton({ text: "Continue" }) }}
     </form>

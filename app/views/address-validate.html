@@ -5,7 +5,6 @@
 {% from "govuk/components/button/macro.njk" import govukButton %}
 {% from "govuk/components/notification-banner/macro.njk" import govukNotificationBanner %}
 {% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
-{% from "govuk/components/warning-text/macro.njk" import govukWarningText %}
 
 {% set pageName = "Check an address" %}
 {% set backLink = "/" %}
@@ -18,13 +17,6 @@
       {{ govukErrorSummary({
         titleText: "There is a problem",
         errorList: errorList
-      }) }}
-    {% endif %}
-
-    {% if serviceError %}
-      {{ govukWarningText({
-        text: serviceError,
-        iconFallbackText: "Warning"
       }) }}
     {% endif %}
 

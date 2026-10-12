@@ -18,12 +18,10 @@ backLink = entryBackLink or (basePath + "/contact-details") %} {% block content
       "govuk-fieldset__legend--l" } }, hint: { text: "Select an option" },
       items: [ { value: "Plant protection products (PPPs) only", text: "Plant
       protection products (PPPs) only", checked: checked("store-only-products",
-      "Plant protection products (PPPs) only") }, { value: "Ingredients or
-      adjuvants only", text: "Ingredients or adjuvants only", checked:
+      "Plant protection products (PPPs) only") }, { value: "Ingredients or adjuvants only", text: "Ingredients or adjuvants only", checked:
       checked("store-only-products", "Ingredients or adjuvants only") }, {
       value: "Both PPPs and ingredients or adjuvants", text: "Both PPPs and
-      ingredients or adjuvants", checked: checked("store-only-products", "Both
-      PPPs and ingredients or adjuvants") } ] }) }} {{ govukButton({ text:
+      ingredients or adjuvants", checked: checked("store-only-products", "Both PPPs and ingredients or adjuvants") } ] }) }} {{ govukButton({ text:
       "Continue" }) }}
     </form>
   </div>

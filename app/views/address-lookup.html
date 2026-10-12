@@ -4,7 +4,6 @@
 {% from "govuk/components/select/macro.njk" import govukSelect %}
 {% from "govuk/components/button/macro.njk" import govukButton %}
 {% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
-{% from "govuk/components/warning-text/macro.njk" import govukWarningText %}
 
 {% set pageName = "Find an address" %}
 {% set backLink = "/" %}
@@ -21,13 +20,6 @@
     {% endif %}
 
     <h1 class="govuk-heading-xl">Find an address</h1>
-
-    {% if serviceError %}
-      {{ govukWarningText({
-        text: serviceError,
-        iconFallbackText: "Warning"
-      }) }}
-    {% endif %}
 
     <form method="post" action="/address-lookup" novalidate>
 
