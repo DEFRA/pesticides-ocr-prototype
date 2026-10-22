@@ -19,10 +19,9 @@ const view = (name) => V + '/' + name // view path for render (app/views/v1-3-1/
 // v1.3 sector → subsector → schemes chain (Using journey). A subsector page
 // appears per selected sector (Agriculture/Amenity/Horticulture, in that order);
 // the assurance-schemes page only if Agriculture or Horticulture was selected;
-// then on to store-applied. Given the page just completed (null at the start),
-// return the next page name in the chain.
-const sectorChainNext = (afterPage, sectors) => {
-  const steps = []
+// then on to store-applied.
+const sectorChain = (sectors) => {
+  const steps = ['sector']
   if (sectors.includes('Agriculture')) steps.push('agri-subsectors')
   if (sectors.includes('Amenity')) steps.push('amenity-subsectors')
   if (sectors.includes('Horticulture')) steps.push('horti-subsectors')
@@ -30,7 +29,63 @@ const sectorChainNext = (afterPage, sectors) => {
     steps.push('assurance-schemes')
   }
   steps.push('store-applied')
-  return steps[steps.indexOf(afterPage) + 1]
+  return steps
+}
+// The page after the one just completed (null for the sector page itself).
+const sectorChainNext = (afterPage, sectors) => {
+  const steps = sectorChain(sectors)
+  return steps[steps.indexOf(afterPage || 'sector') + 1]
+}
+const sectorChainPrev = (page, sectors) => {
+  const steps = sectorChain(sectors)
+  return steps[steps.indexOf(page) - 1]
+}
+
+// The page before a storage quantity page, following the storage answers.
+// Manual entry is recognised by its address line 1, as on the check-answers page.
+const storageBack = (d, f) => {
+  if (d[f.store] === 'Yes, at sites we own') {
+    if (d[f.where] === 'Main business address') return f.wherePage
+    return filled(d[f.line1]) ? f.manualPage : f.resultPage
+  }
+  if (d[f.store] === f.thirdPartyAnswer) return f.thirdPartyPage
+  return f.storePage
+}
+
+// Back links that depend on the path taken. Templates use
+// `pathBackLink or <default>`.
+const pathBack = {
+  'amenity-subsectors': (d) =>
+    sectorChainPrev('amenity-subsectors', toArray(d.sector)),
+  'horti-subsectors': (d) =>
+    sectorChainPrev('horti-subsectors', toArray(d.sector)),
+  'assurance-schemes': (d) =>
+    sectorChainPrev('assurance-schemes', toArray(d.sector)),
+  'store-applied': (d) => sectorChainPrev('store-applied', toArray(d.sector)),
+  quantity: (d) =>
+    storageBack(d, {
+      store: 'store-applied',
+      where: 'storing-where',
+      line1: 'store-line-1',
+      thirdPartyAnswer: 'Yes, a third party stores them for us',
+      storePage: 'store-applied',
+      wherePage: 'storing-where',
+      manualPage: 'store-own-address-manual',
+      resultPage: 'store-own-address-result',
+      thirdPartyPage: 'store-3rd-party-contact'
+    }),
+  'import-quantity': (d) =>
+    storageBack(d, {
+      store: 'import-storing',
+      where: 'import-storing-where',
+      line1: 'import-store-line-1',
+      thirdPartyAnswer: 'Yes, a third party stores them on our behalf',
+      storePage: 'import-storing',
+      wherePage: 'import-storing-where',
+      manualPage: 'import-store-own-address-manual',
+      resultPage: 'import-store-own-address-result',
+      thirdPartyPage: 'import-store-3rd-party-contact'
+    })
 }
 
 // Entry page for each activity's sub-flow. The common route (activities →
@@ -63,9 +118,7 @@ const activityDone = (act, d) => {
     case 'storing-only':
       return filled(d['store-only-quantity'])
     case 'selling':
-      return (
-        filled(d['sell-pro-quantity']) || filled(d['sell-amateur-quantity'])
-      )
+      return filled(d['sell-pro-sites']) || filled(d['sell-amateur-quantity'])
     default:
       return true
   }
@@ -95,7 +148,7 @@ const entryActivity = Object.fromEntries(
 const lastPageOfActivity = (act, d) => {
   if (act === 'selling') {
     return d['sell-use-type'] === 'Mostly professional use'
-      ? 'sell-pro-quantity'
+      ? 'sell-pro-sites'
       : 'sell-amateur-quantity'
   }
   return {
@@ -141,6 +194,17 @@ module.exports = (router) => {
         res.locals.entryBackLink =
           P + '/' + lastPageOfActivity(acts[idx - 1], req.session.data)
       }
+    }
+    next()
+  })
+
+  // Path-dependent back links (see pathBack). Set for POSTs too, so a page
+  // re-rendered with errors keeps the same back link.
+  router.use((req, res, next) => {
+    if (req.path.startsWith(P + '/') && req.session.data) {
+      const backOf = pathBack[req.path.slice(P.length + 1).replace(/\/$/, '')]
+      const back = backOf && backOf(req.session.data)
+      if (back) res.locals.pathBackLink = P + '/' + back
     }
     next()
   })
@@ -551,7 +615,7 @@ module.exports = (router) => {
   })
 
   // Where do you store? Main address → quantity; different location → storage
-  // address lookup.
+  // location chooser.
   router.post(P + '/storing-where', (req, res) => {
     const answer = req.session.data['storing-where']
     const v = validate([
@@ -570,8 +634,14 @@ module.exports = (router) => {
     res.redirect(P + '/store-own-address-lookup')
   })
 
-  // Storage location lookup (own, different location) → address result.
-  router.post(P + '/store-own-address-lookup', (req, res) => {
+  // Storage location chooser: "Find an address" and Continue both go to the
+  // postcode search; "enter an address manually" links to the manual page.
+  router.post(P + '/store-own-address-lookup', (req, res) =>
+    res.redirect(P + '/store-own-address-search')
+  )
+
+  // Storage location postcode search → address result.
+  router.post(P + '/store-own-address-search', (req, res) => {
     const v = validate([
       {
         field: 'store-postcode',
@@ -579,7 +649,7 @@ module.exports = (router) => {
         valid: filled(req.session.data['store-postcode'])
       }
     ])
-    if (!v.ok) return res.render(view('store-own-address-lookup'), v)
+    if (!v.ok) return res.render(view('store-own-address-search'), v)
     const back = consumeReturnTo(req)
     if (back) return res.redirect(P + '/' + back)
     res.redirect(P + '/store-own-address-result')
@@ -617,7 +687,7 @@ module.exports = (router) => {
   })
 
   // --- Manufacturing PPPs journey (Figma 1.3) -----------------------------
-  // products → quantity band → check-answers.
+  // products → number of sites → free-text annual volume → check-answers.
 
   router.post(P + '/manufacture-products', (req, res) => {
     const v = validate([
@@ -628,6 +698,20 @@ module.exports = (router) => {
       }
     ])
     if (!v.ok) return res.render(view('manufacture-products'), v)
+    const back = consumeReturnTo(req)
+    if (back) return res.redirect(P + '/' + back)
+    res.redirect(P + '/manufacture-sites')
+  })
+
+  router.post(P + '/manufacture-sites', (req, res) => {
+    const v = validate([
+      {
+        field: 'manufacture-sites',
+        message: 'Select how many sites you manufacture PPPs at',
+        valid: filled(req.session.data['manufacture-sites'])
+      }
+    ])
+    if (!v.ok) return res.render(view('manufacture-sites'), v)
     const back = consumeReturnTo(req)
     if (back) return res.redirect(P + '/' + back)
     res.redirect(P + '/manufacture-quantity')
@@ -652,7 +736,7 @@ module.exports = (router) => {
   })
 
   // --- Selling PPPs journey (Figma 1.3) -----------------------------------
-  // PPP use type splits into a professional branch (products → quantity)
+  // PPP use type splits into a professional branch (products → quantity → sites)
   // and an amateur branch (quantity → …). Selling-only additionally collects the
   // head-office address and contact within this flow. (Downstream pages are wired
   // as the remaining Sell screens land.)
@@ -721,6 +805,20 @@ module.exports = (router) => {
       }
     ])
     if (!v.ok) return res.render(view('sell-pro-quantity'), v)
+    const back = consumeReturnTo(req)
+    if (back) return res.redirect(P + '/' + back)
+    res.redirect(P + '/sell-pro-sites')
+  })
+
+  router.post(P + '/sell-pro-sites', (req, res) => {
+    const v = validate([
+      {
+        field: 'sell-pro-sites',
+        message: 'Select how many sites you sell professional PPPs at',
+        valid: filled(req.session.data['sell-pro-sites'])
+      }
+    ])
+    if (!v.ok) return res.render(view('sell-pro-sites'), v)
     const back = consumeReturnTo(req)
     if (back) return res.redirect(P + '/' + back)
     // Selling-only collects the head office address + contact within this flow.
@@ -816,7 +914,7 @@ module.exports = (router) => {
   })
 
   // --- Only storing PPPs journey (Figma 1.3) ------------------------------
-  // products → free-text annual volume → check-answers.
+  // products → number of sites → free-text annual volume → check-answers.
   // (storing-only is exclusive but still uses the common address/contact route.)
 
   router.post(P + '/store-only-products', (req, res) => {
@@ -828,6 +926,20 @@ module.exports = (router) => {
       }
     ])
     if (!v.ok) return res.render(view('store-only-products'), v)
+    const back = consumeReturnTo(req)
+    if (back) return res.redirect(P + '/' + back)
+    res.redirect(P + '/store-only-sites')
+  })
+
+  router.post(P + '/store-only-sites', (req, res) => {
+    const v = validate([
+      {
+        field: 'store-only-sites',
+        message: 'Select how many sites you store PPPs at',
+        valid: filled(req.session.data['store-only-sites'])
+      }
+    ])
+    if (!v.ok) return res.render(view('store-only-sites'), v)
     const back = consumeReturnTo(req)
     if (back) return res.redirect(P + '/' + back)
     res.redirect(P + '/store-only-quantity')
@@ -852,7 +964,7 @@ module.exports = (router) => {
   })
 
   // --- Distributing PPPs journey (Figma 1.3) ------------------------------
-  // products → free-text annual volume → check-answers.
+  // products → number of sites → free-text annual volume → check-answers.
 
   router.post(P + '/distribute-products', (req, res) => {
     const v = validate([
@@ -863,6 +975,20 @@ module.exports = (router) => {
       }
     ])
     if (!v.ok) return res.render(view('distribute-products'), v)
+    const back = consumeReturnTo(req)
+    if (back) return res.redirect(P + '/' + back)
+    res.redirect(P + '/distribute-sites')
+  })
+
+  router.post(P + '/distribute-sites', (req, res) => {
+    const v = validate([
+      {
+        field: 'distribute-sites',
+        message: 'Select how many sites you distribute PPPs at',
+        valid: filled(req.session.data['distribute-sites'])
+      }
+    ])
+    if (!v.ok) return res.render(view('distribute-sites'), v)
     const back = consumeReturnTo(req)
     if (back) return res.redirect(P + '/' + back)
     res.redirect(P + '/distribute-quantity')
@@ -887,7 +1013,7 @@ module.exports = (router) => {
   })
 
   // --- Processing PPPs journey (Figma 1.3) --------------------------------
-  // products → free-text annual volume → check-answers.
+  // products → number of sites → free-text annual volume → check-answers.
 
   router.post(P + '/process-products', (req, res) => {
     const v = validate([
@@ -898,6 +1024,20 @@ module.exports = (router) => {
       }
     ])
     if (!v.ok) return res.render(view('process-products'), v)
+    const back = consumeReturnTo(req)
+    if (back) return res.redirect(P + '/' + back)
+    res.redirect(P + '/process-sites')
+  })
+
+  router.post(P + '/process-sites', (req, res) => {
+    const v = validate([
+      {
+        field: 'process-sites',
+        message: 'Select how many sites you process PPPs at',
+        valid: filled(req.session.data['process-sites'])
+      }
+    ])
+    if (!v.ok) return res.render(view('process-sites'), v)
     const back = consumeReturnTo(req)
     if (back) return res.redirect(P + '/' + back)
     res.redirect(P + '/process-quantity')
@@ -987,8 +1127,8 @@ module.exports = (router) => {
     res.redirect(P + '/import-quantity')
   })
 
-  // Where do you store? Main address → quantity; other locations → storage
-  // address search.
+  // Where do you store? Main address → quantity; different location → storage
+  // location chooser.
   router.post(P + '/import-storing-where', (req, res) => {
     const answer = req.session.data['import-storing-where']
     const v = validate([
@@ -1004,8 +1144,13 @@ module.exports = (router) => {
     if (answer === 'Main business address') {
       return res.redirect(P + '/import-quantity')
     }
-    res.redirect(P + '/import-store-own-address-search')
+    res.redirect(P + '/import-store-own-address-lookup')
   })
+
+  // Storage location chooser (import), as for the Using journey.
+  router.post(P + '/import-store-own-address-lookup', (req, res) =>
+    res.redirect(P + '/import-store-own-address-search')
+  )
 
   // Storage location postcode search → results.
   router.post(P + '/import-store-own-address-search', (req, res) => {
@@ -1207,9 +1352,9 @@ module.exports = (router) => {
   // prose and can insert newlines inside string literals, which silently breaks
   // in-template string comparisons; computing the flags here avoids that.
   const STORING_WHERE_LABEL = {
-    'Main business address': 'Only at the main business address',
+    'Main business address': 'At main business address',
     'A different location to the main business address':
-      'At the main business address and other locations'
+      'At a different location'
   }
   router.get(P + '/check-answers', (req, res) => {
     const d = req.session.data || {}
@@ -1228,7 +1373,7 @@ module.exports = (router) => {
       selling: sellSellingOnly
         ? '/sell-amateur-contact-details'
         : sellPro
-          ? '/sell-pro-quantity'
+          ? '/sell-pro-sites'
           : '/sell-amateur-quantity'
     }
     const flowActs = acts.filter((a) => activityEntry[a])
@@ -1243,7 +1388,10 @@ module.exports = (router) => {
         STORING_WHERE_LABEL[d['import-storing-where']] ||
         d['import-storing-where'] ||
         '',
-      // Using PPPs section
+      // Using PPPs section: a subsector row only for its selected main sector
+      usingAgri: sectors.includes('Agriculture'),
+      usingAmenity: sectors.includes('Amenity'),
+      usingHorti: sectors.includes('Horticulture'),
       usingAnotherOrg:
         d['who-applies'] === 'Another organisation applies PPPs on our behalf',
       usingAssurance:

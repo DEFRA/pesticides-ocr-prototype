@@ -3,8 +3,8 @@
 "govuk/components/button/macro.njk" import govukButton %} {% from
 "govuk/components/error-summary/macro.njk" import govukErrorSummary %} {% set
 pageName = "What is the overall volume of PPPs, ingredients and adjuvants your
-business imports in a typical year?" %} {% set backLink = basePath +
-"/import-storing" %} {% block content %}
+business imports in a typical year?" %} {% set backLink = pathBackLink or
+(basePath + "/import-storing") %} {% block content %}
 <div class="govuk-grid-row">
   <div class="govuk-grid-column-two-thirds">
     {% if errorList %}{{ govukErrorSummary({ titleText: "There is a problem",

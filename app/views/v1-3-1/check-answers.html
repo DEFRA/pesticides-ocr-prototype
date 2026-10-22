@@ -1,22 +1,21 @@
 {% extends "layouts/main.html" %} {% set basePath = "/v1-3-1" %} {% from
 "govuk/components/summary-list/macro.njk" import govukSummaryList %} {% from
 "govuk/components/button/macro.njk" import govukButton %} {% set pageName =
-"Check your details" %} {# Boolean flags (usingAssurance, store*, import*,
-sell*), the resolved storing-where label lines, and the back link are computed
+"Check your details" %} {# Boolean flags (using*, import*, sell*), the resolved storing-where label lines, and the back link are computed
 in the /check-answers GET route — the formatter reflows {% set %} blocks like
 prose and would break in-template string comparisons and multi-word map keys. #}
 {% set backLink = cyaBack %} {% set activityLabels = { "using": "Using PPPs as
 part of your work", "manufacturing": "Manufacturing PPPs", "importing": "Import
 PPPs", "processing": "Processing PPPs", "selling": "Selling PPPs",
 "distributing": "Distributing PPPs", "storing-only": "Only storing PPPs for
-other businesses" } %} {# Which field holds the subsectors for each main sector,
-for the nested bullets #} {% set subsectorMap = { "Agriculture":
-data["agri-subsector"], "Horticulture": data["horti-subsector"], "Amenity":
-data["amenity-subsector"] } %} {# Render one or many coded values as their
+other businesses" } %} {# Render one or many coded values as their
 labels, one per line #} {% macro labelled(value, labels) %} {%- if value -%} {%-
 if value is string -%}{{ labels[value] or value }} {%- else -%}{% for v in value
 %}{{ labels[v] or v }}{% if not loop.last %}<br />{% endif %}{% endfor %} {%-
-endif -%} {%- endif -%} {% endmacro %} {% block content %}
+endif -%} {%- endif -%} {% endmacro %} {# Ticked options, one per line, then
+the Other text #} {% macro withOther(value, other) %}{{ labelled(value, {})
+}}{% if value and other %}<br />{% endif %}{{ other }}{% endmacro %} {% block
+content %}
 <div class="govuk-grid-row">
   <div class="govuk-grid-column-two-thirds">
     <h1 class="govuk-heading-l govuk-!-margin-bottom-4">Check your details</h1>
@@ -88,30 +87,22 @@ endif -%} {%- endif -%} {% endmacro %} {% block content %}
     %} {{ govukSummaryList({ rows: businessRows }) }}
 
     <h2 class="govuk-heading-m">PPP activity details</h2>
-    {# ---- Using PPPs section
-    ---- #} {% if data.activities and "using" in data.activities %}
+    {# ---- Using PPPs section ---- #} {% if data.activities and "using" in
+    data.activities %}
 
     {% set thirdPartyHtml %}{{ data["third-party-name"] }}<br />{{
     data["third-party-line-1"] }}{% if data["third-party-line-2"] %}<br />{{
     data["third-party-line-2"] }}{% endif %}<br />{{ data["third-party-town"]
     }}<br />{{ data["third-party-postcode"] }}<br />{{
-    data["third-party-country"] }}{% endset %} {# Main sector of work: each main
-    sector on its own line with its subsectors as bullets beneath #} {% set
-    sectorHtml %} {%- set sectors = [data.sector] if data.sector is string else
-    (data.sector or []) -%} {%- for s in sectors -%} {{ s }} {%- set subs =
-    subsectorMap[s] -%} {%- if subs -%} {%- set subsList = [subs] if subs is
-    string else subs -%}
-    <ul class="govuk-list govuk-list--bullet govuk-!-margin-top-1">
-      {% for sub in subsList %}
-      <li>{{ sub }}</li>
-      {% endfor %}
-    </ul>
-    {%- elif not loop.last -%}<br />{%- endif -%} {%- endfor -%} {%- if
-    data["sector-other"] %}{{ data["sector-other"] }}{% endif -%} {% endset %}
-    {% set assuranceHtml %}{{ labelled(data["assurance-schemes"], {}) }}{% if
-    data["assurance-schemes-other"] %}<br />{{ data["assurance-schemes-other"]
-    }}{% endif %}{% endset %} {% set storeAppliedHtml %}{{ data["store-applied"]
-    }}{% if usingStoreOwnSites and usingStoringWhereText %}<br />{{
+    data["third-party-country"] }}{% endset %} {% set sectorHtml %}{{
+    withOther(data.sector, data["sector-other"]) }}{% endset %} {% set agriHtml %}{{ withOther(data["agri-subsector"],
+    data["agri-subsector-other"]) }}{% endset %} {% set amenityHtml %}{{
+    withOther(data["amenity-subsector"], data["amenity-subsector-other"]) }}{%
+    endset %} {% set hortiHtml %}{{ withOther(data["horti-subsector"],
+    data["horti-subsector-other"]) }}{% endset %} {% set assuranceHtml %}{{
+    withOther(data["assurance-schemes"], data["assurance-schemes-other"]) }}{%
+    endset %} {% set storeAppliedHtml %}{{ data["store-applied"] }}{% if
+    usingStoreOwnSites and usingStoringWhereText %}<br />{{
     usingStoringWhereText }}{% endif %}{% endset %} {# "PPP store details":
     third-party storage contact, or the own storage address when it differs from
     the main address #} {% set storeDetailsHtml %}{% if usingStoreThirdParty
@@ -124,7 +115,9 @@ endif -%} {%- endif -%} {% endmacro %} {% block content %}
     %}{{ data["store-building"] }}<br />{{ data["store-postcode"] }}{% endif
     %}{% endif %}{% endset %} {% set storeDetailsHref = (basePath +
     "/store-3rd-party-contact") if usingStoreThirdParty else (basePath +
-    "/store-own-address-lookup") %} {% set pppRows = [] %} {% set pppRows =
+    "/store-own-address-lookup") %} {% set usingQuantityText %}{% if
+    data["quantity"] %}{{ data["quantity"] }} Kgs/litres{% endif %}{% endset %}
+    {% set pppRows = [] %} {% set pppRows =
     (pppRows.push({ key: { text: "Who applies PPPs?" }, value: { text:
     data["who-applies"] }, actions: { items: [{ href: basePath +
     "/who-applies?returnTo=check-answers", text: "Change", visuallyHiddenText:
@@ -133,26 +126,38 @@ endif -%} {%- endif -%} {% endmacro %} {% block content %}
     html: thirdPartyHtml }, actions: { items: [{ href: basePath +
     "/third-party?returnTo=check-answers", text: "Change", visuallyHiddenText:
     "third party details" }] } }), pppRows) %} {% endif %} {% set pppRows =
-    (pppRows.push({ key: { text: "Main sector of work" }, value: { html:
+    (pppRows.push({ key: { text: "Main sectors of work" }, value: { html:
     sectorHtml }, actions: { items: [{ href: basePath +
-    "/sector?returnTo=check-answers", text: "Change", visuallyHiddenText: "main
-    sector of work" }] } }), pppRows) %} {% if usingAssurance %} {% set pppRows
-    = (pppRows.push({ key: { text: "Assurance schemes" }, value: { html:
-    assuranceHtml }, actions: { items: [{ href: basePath +
-    "/assurance-schemes?returnTo=check-answers", text: "Change",
-    visuallyHiddenText: "assurance schemes" }] } }), pppRows) %} {% endif %} {%
-    set pppRows = (pppRows.push({ key: { text: "Do you store applied PPPs?" },
-    value: { html: storeAppliedHtml }, actions: { items: [{ href: basePath +
-    "/store-applied?returnTo=check-answers", text: "Change", visuallyHiddenText:
-    "whether you store applied PPPs" }] } }), pppRows) %} {% if
-    usingStoreThirdParty or usingStoreOwnDifferent %} {% set pppRows =
+    "/sector?returnTo=check-answers", text: "Change", visuallyHiddenText:
+    "main sectors of work" }] } }), pppRows) %} {% if usingAgri %} {% set
+    pppRows = (pppRows.push({ key: { text: "Agriculture sectors" }, value: {
+    html: agriHtml }, actions: { items: [{ href: basePath +
+    "/agri-subsectors?returnTo=check-answers", text: "Change",
+    visuallyHiddenText: "agriculture sectors" }] } }), pppRows) %} {% endif %}
+    {% if usingAmenity %} {% set pppRows = (pppRows.push({ key: { text:
+    "Amenity sectors" }, value: { html: amenityHtml }, actions: { items: [{
+    href: basePath + "/amenity-subsectors?returnTo=check-answers", text:
+    "Change", visuallyHiddenText: "amenity sectors" }] } }), pppRows) %} {%
+    endif %} {% if usingHorti %} {% set pppRows = (pppRows.push({ key: { text:
+    "Horticulture sectors" }, value: { html: hortiHtml }, actions: { items: [{
+    href: basePath + "/horti-subsectors?returnTo=check-answers", text:
+    "Change", visuallyHiddenText: "horticulture sectors" }] } }), pppRows) %}
+    {% endif %} {% if usingAssurance %} {% set pppRows = (pppRows.push({ key: {
+    text: "Assurance schemes" }, value: { html: assuranceHtml }, actions: {
+    items: [{ href: basePath + "/assurance-schemes?returnTo=check-answers",
+    text: "Change", visuallyHiddenText: "assurance schemes" }] } }), pppRows)
+    %} {% endif %} {% set pppRows = (pppRows.push({ key: { text: "Do you store
+    applied PPPs?" }, value: { html: storeAppliedHtml }, actions: { items: [{
+    href: basePath + "/store-applied?returnTo=check-answers", text: "Change",
+    visuallyHiddenText: "whether you store applied PPPs" }] } }), pppRows) %} {%
+    if usingStoreThirdParty or usingStoreOwnDifferent %} {% set pppRows =
     (pppRows.push({ key: { text: "PPP store details" }, value: { html:
     storeDetailsHtml }, actions: { items: [{ href: storeDetailsHref +
     "?returnTo=check-answers", text: "Change", visuallyHiddenText: "PPP store
     details" }] } }), pppRows) %} {% endif %} {% set pppRows =
     (pppRows.push({ key: { text: "Quantity of PPPs or adjuvants used in the last
-    year" }, value: { text: data["quantity"] }, actions: { items: [{ href:
-    basePath + "/quantity?returnTo=check-answers", text: "Change",
+    year" }, value: { text: usingQuantityText | trim }, actions: { items: [{
+    href: basePath + "/quantity?returnTo=check-answers", text: "Change",
     visuallyHiddenText: "quantity of PPPs or adjuvants" }] } }), pppRows) %} {{
     govukSummaryList({ rows: pppRows }) }} {% endif %} {# ---- Manufacturing
     PPPs section ---- #} {% if data.activities and "manufacturing" in
@@ -164,6 +169,9 @@ endif -%} {%- endif -%} {% endmacro %} {% block content %}
     manufacture?" }, value: { text: data["manufacture-products"] }, actions: {
     items: [{ href: basePath + "/manufacture-products?returnTo=check-answers",
     text: "Change", visuallyHiddenText: "what products you manufacture" }] } },
+    { key: { text: "How many manufacturing sites?" }, value: { text: data["manufacture-sites"] }, actions: {
+    items: [{ href: basePath + "/manufacture-sites?returnTo=check-answers", text: "Change",
+    visuallyHiddenText: "how many manufacturing sites" }] } },
     { key: { text:
     "Volume of PPPs and ingredients or adjuvants manufactured in the last year"
     }, value: { text: manufactureQuantityText | trim }, actions: { items: [{
@@ -187,7 +195,7 @@ endif -%} {%- endif -%} {% endmacro %} {% block content %}
     }}<br />{{ data["import-store-postcode"] }}{% endif %}{% endif %}{% endset
     %} {% set importStoreDetailsHref = (basePath +
     "/import-store-3rd-party-contact") if importStoreThirdParty else (basePath +
-    "/import-store-own-address-search") %} {% set importQuantityText %}{% if
+    "/import-store-own-address-lookup") %} {% set importQuantityText %}{% if
     data["import-quantity"] %}{{ data["import-quantity"] }} Kgs/litres{% endif
     %}{% endset %} {% set importRows = [] %} {% set importRows =
     (importRows.push({ key: { text: "What products do you import?" }, value: {
@@ -217,7 +225,11 @@ endif -%} {%- endif -%} {% endmacro %} {% block content %}
     govukSummaryList({ rows: [ { key: { text: "What products do you process?" },
     value: { text: data["process-products"] }, actions: { items: [{ href:
     basePath + "/process-products?returnTo=check-answers", text: "Change",
-    visuallyHiddenText: "what products you process" }] } }, { key: {
+    visuallyHiddenText: "what products you process" }] } },
+    { key: { text: "How many processing sites?" }, value: { text: data["process-sites"] }, actions: {
+    items: [{ href: basePath + "/process-sites?returnTo=check-answers", text: "Change",
+    visuallyHiddenText: "how many processing sites" }] } },
+    { key: {
     text: "Volume of PPPs and ingredients or adjuvants processed in the last
     year" }, value: { text: processQuantityText | trim }, actions: { items: [{
     href: basePath + "/process-quantity?returnTo=check-answers", text: "Change",
@@ -241,7 +253,10 @@ endif -%} {%- endif -%} {% endmacro %} {% block content %}
     and ingredients or adjuvants sold in the last year" }, value: { text:
     sellProVolText | trim }, actions: { items: [{ href: basePath +
     "/sell-pro-quantity?returnTo=check-answers", text: "Change",
-    visuallyHiddenText: "volume sold in the last year" }] } }), sellRows) %} {% else
+    visuallyHiddenText: "volume sold in the last year" }] } }), sellRows) %} {%
+    set sellRows = (sellRows.push({ key: { text: "How many sites?" }, value: { text: data["sell-pro-sites"] }, actions: {
+    items: [{ href: basePath + "/sell-pro-sites?returnTo=check-answers", text: "Change",
+    visuallyHiddenText: "how many sites you sell at" }] } }), sellRows) %} {% else
     %} {% set sellRows = (sellRows.push({ key: { text: "Volume of PPPs and
     ingredients or adjuvants sold in the last year" }, value: { text:
     sellAmateurVolText | trim }, actions: { items: [{ href: basePath +
@@ -256,7 +271,11 @@ endif -%} {%- endif -%} {% endmacro %} {% block content %}
     govukSummaryList({ rows: [ { key: { text: "What products do you distribute?"
     }, value: { text: data["distribute-products"] }, actions: { items: [{ href:
     basePath + "/distribute-products?returnTo=check-answers", text: "Change",
-    visuallyHiddenText: "what products you distribute" }] } }, { key: { text:
+    visuallyHiddenText: "what products you distribute" }] } },
+    { key: { text: "How many distribution sites?" }, value: { text: data["distribute-sites"] }, actions: {
+    items: [{ href: basePath + "/distribute-sites?returnTo=check-answers", text: "Change",
+    visuallyHiddenText: "how many distribution sites" }] } },
+    { key: { text:
     "Volume of PPPs and ingredients or adjuvants distributed in the last year"
     }, value: { text: distributeQuantityText | trim }, actions: { items: [{
     href: basePath + "/distribute-quantity?returnTo=check-answers", text:
@@ -269,7 +288,11 @@ endif -%} {%- endif -%} {% endmacro %} {% block content %}
     govukSummaryList({ rows: [ { key: { text: "What products do you store?" },
     value: { text: data["store-only-products"] }, actions: { items: [{ href:
     basePath + "/store-only-products?returnTo=check-answers", text: "Change",
-    visuallyHiddenText: "what products you store" }] } }, { key:
+    visuallyHiddenText: "what products you store" }] } },
+    { key: { text: "How many storage sites?" }, value: { text: data["store-only-sites"] }, actions: {
+    items: [{ href: basePath + "/store-only-sites?returnTo=check-answers", text: "Change",
+    visuallyHiddenText: "how many storage sites" }] } },
+    { key:
     { text: "Volume of PPPs and ingredients or adjuvants stored in the last
     year" }, value: { text: storeOnlyQuantityText | trim }, actions: { items: [{
     href: basePath + "/store-only-quantity?returnTo=check-answers", text:

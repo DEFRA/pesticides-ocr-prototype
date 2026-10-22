@@ -30,9 +30,8 @@ block content %}
       </li>
     </ul>
 
-    {# Continue leads to the same next page (page 3) as the business-activities
-    Continue. Kept in sync with the /activities route target. #} {{
-    govukButton({ text: "Continue", href: basePath + "/business-name" }) }}
+    {# Continue returns to the service start (Figma). #} {{ govukButton({ text:
+    "Continue", href: basePath + "/start" }) }}
   </div>
 </div>
 {% endblock %}

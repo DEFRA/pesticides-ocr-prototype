@@ -4,7 +4,7 @@
 "govuk/components/button/macro.njk" import govukButton %} {% from
 "govuk/components/error-summary/macro.njk" import govukErrorSummary %} {% set
 pageName = "What horticultural sectors do you apply PPPs?" %} {% set backLink =
-basePath + "/sector" %} {% block content %}
+pathBackLink or (basePath + "/sector") %} {% block content %}
 <div class="govuk-grid-row">
   <div class="govuk-grid-column-two-thirds">
     {% if errorList %}{{ govukErrorSummary({ titleText: "There is a problem",
@@ -16,13 +16,10 @@ basePath + "/sector" %} {% block content %}
       legend: { text: "What horticultural sectors do you apply PPPs?",
       isPageHeading: true, classes: "govuk-fieldset__legend--l" } }, hint: {
       text: "Select all that apply" }, items: [ { value: "Edible protected crops", text: "Edible protected crops", checked:
-      checked("horti-subsector", "Edible protected crops") }, { value: "Orchards & soft fruit", text: "Orchards & soft fruit", checked:
-      checked("horti-subsector", "Orchards & soft fruit") }, { value:
+      checked("horti-subsector", "Edible protected crops") }, { value: "Orchards and soft fruit", text: "Orchards and soft fruit", checked:
+      checked("horti-subsector", "Orchards and soft fruit") }, { value:
       "Ornamentals", text: "Ornamentals", checked: checked("horti-subsector",
       "Ornamentals") } ] }) }}
-
-      <p class="govuk-body">or</p>
-
       {{ govukTextarea({ label: { text: "Other", classes: "govuk-label--s" },
       hint: { text: "Describe your main type of work in a few words" }, id:
       "horti-subsector-other", name: "horti-subsector-other", rows: 3, value:

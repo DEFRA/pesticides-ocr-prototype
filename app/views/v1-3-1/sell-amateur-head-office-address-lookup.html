@@ -1,7 +1,7 @@
 {% extends "layouts/main.html" %} {% set basePath = "/v1-3-1" %} {% from
 "govuk/components/button/macro.njk" import govukButton %} {% set pageName =
 "What is the address for your head office?" %} {% set backLink = (basePath +
-"/sell-pro-quantity") if (data["sell-use-type"] == "Mostly professional use") else
+"/sell-pro-sites") if (data["sell-use-type"] == "Mostly professional use") else
 (basePath + "/sell-amateur-quantity") %} {% block content %}
 <div class="govuk-grid-row">
   <div class="govuk-grid-column-two-thirds">

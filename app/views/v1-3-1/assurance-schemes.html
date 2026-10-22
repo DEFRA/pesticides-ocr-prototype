@@ -2,8 +2,8 @@
 "govuk/components/checkboxes/macro.njk" import govukCheckboxes %} {% from
 "govuk/components/textarea/macro.njk" import govukTextarea %} {% from
 "govuk/components/button/macro.njk" import govukButton %} {% set pageName = "Are
-you a member of any assurance schemes?" %} {% set backLink = basePath +
-"/sector" %} {% block content %}
+you a member of any assurance schemes?" %} {% set backLink = pathBackLink or
+(basePath + "/sector") %} {% block content %}
 <div class="govuk-grid-row">
   <div class="govuk-grid-column-two-thirds">
     <form method="post" action="{{ basePath }}/assurance-schemes" novalidate>
@@ -22,9 +22,6 @@ you a member of any assurance schemes?" %} {% set backLink = basePath +
       "Scottish Quality Crops (SQC)", hint: { text: "For businesses operating
       under Scottish quality crop assurance guidelines." }, checked:
       checked("assurance-schemes", "Scottish Quality Crops (SQC)") } ] }) }}
-
-      <p class="govuk-body">or</p>
-
       {{ govukTextarea({ label: { text: "Other", classes: "govuk-label--s" },
       hint: { text: "Enter the names of any assurance schemes not listed." },
       id: "assurance-schemes-other", name: "assurance-schemes-other", rows: 3,
