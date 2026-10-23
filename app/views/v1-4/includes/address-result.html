@@ -1,0 +1,46 @@
+{# Shared result page for the OS Places address lookups. Rendered by
+addressLookup in app/routes/v1-4.js, which passes its config as `lookup`. #} {%
+extends "layouts/main.html" %} {% set basePath = "/v1-4" %} {% from
+"govuk/components/button/macro.njk" import govukButton %} {% set pageName =
+lookup.heading %} {% set results = data[lookup.resultsKey] or [] %} {% set
+address = data[lookup.selectedKey] %} {% set postcode =
+data[lookup.searchFields.postcode] %} {% set building =
+data[lookup.searchFields.building] %} {% set backLink = basePath + "/" +
+(lookup.select if results | length > 1 else lookup.search) %} {% block content
+%}
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+    <h1 class="govuk-heading-l govuk-!-margin-bottom-4">{{ lookup.heading }}</h1>
+
+    {% if results | length == 1 %}
+    <p class="govuk-body">
+      1 address found for
+      <strong>{{ postcode | upper }}</strong>{% if building %} and
+      <strong>{{ building }}</strong>{% endif %}.
+      <a class="govuk-link" href="{{ basePath }}/{{ lookup.search }}"
+        >Search again</a
+      >
+    </p>
+    {% endif %}
+
+    <div class="govuk-inset-text">
+      {% for line in address.lines %}{{ line }}<br />{% endfor %} {{
+      address.town }}<br />
+      {{ address.postcode }}{% if address.country %}<br />
+      {{ address.country }}{% endif %}
+    </div>
+
+    <form method="post" action="{{ basePath }}/{{ lookup.result }}" novalidate>
+      <div class="govuk-button-group">
+        {{ govukButton({ text: "Use this address" }) }}
+        <span class="govuk-body"
+          >or
+          <a class="govuk-link" href="{{ basePath }}/{{ lookup.manual }}"
+            >enter an address manually</a
+          ></span
+        >
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
