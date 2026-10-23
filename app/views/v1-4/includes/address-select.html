@@ -1,0 +1,51 @@
+{# Shared select page for the OS Places address lookups. Rendered by
+addressLookup in app/routes/v1-4.js, which passes its config as `lookup`. #} {%
+extends "layouts/main.html" %} {% set basePath = "/v1-4" %} {% from
+"govuk/components/select/macro.njk" import govukSelect %} {% from
+"govuk/components/button/macro.njk" import govukButton %} {% from
+"govuk/components/error-summary/macro.njk" import govukErrorSummary %} {% set
+pageName = lookup.heading %} {% set backLink = basePath + "/" + lookup.search %}
+{% set results = data[lookup.resultsKey] or [] %} {% set postcode =
+data[lookup.searchFields.postcode] %} {% set building =
+data[lookup.searchFields.building] %} {% block content %}
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+    {% if errorList %}{{ govukErrorSummary({ titleText: "There is a problem",
+    errorList: errorList }) }}{% endif %}
+
+    <h1 class="govuk-heading-l govuk-!-margin-bottom-4">{{ lookup.heading }}</h1>
+
+    <p class="govuk-body">
+      {{ results | length }} addresses found for
+      <strong>{{ postcode | upper }}</strong>{% if building %} and
+      <strong>{{ building }}</strong>{% endif %}.
+      <a class="govuk-link" href="{{ basePath }}/{{ lookup.search }}"
+        >Search again</a
+      >
+    </p>
+
+    {% set items = [{ value: "", text: results | length + " addresses found" }]
+    %} {% for address in results %} {% set items = (items.push({ value:
+    address.uprn, text: (address.lines.concat([address.town, address.postcode]))
+    | join(", "), selected: address.uprn == data[lookup.choiceField] }), items)
+    %} {% endfor %}
+
+    <form method="post" action="{{ basePath }}/{{ lookup.select }}" novalidate>
+      {{ govukSelect({ id: lookup.choiceField, name: lookup.choiceField, label:
+      { text: "Select an address", classes: "govuk-label--s" }, errorMessage: {
+      text: errors[lookup.choiceField] } if errors[lookup.choiceField], items:
+      items }) }}
+
+      <div class="govuk-button-group">
+        {{ govukButton({ text: "Continue" }) }}
+        <span class="govuk-body"
+          >or
+          <a class="govuk-link" href="{{ basePath }}/{{ lookup.manual }}"
+            >enter an address manually</a
+          ></span
+        >
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
