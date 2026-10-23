@@ -31,15 +31,63 @@ const sectorChain = (sectors) => {
   steps.push('store-applied')
   return steps
 }
-// The page after the one just completed (null for the sector page itself).
-const sectorChainNext = (afterPage, sectors) => {
+// The pages after the one just completed.
+const sectorChainAfter = (page, sectors) => {
   const steps = sectorChain(sectors)
-  return steps[steps.indexOf(afterPage || 'sector') + 1]
+  return steps.slice(steps.indexOf(page) + 1)
 }
 const sectorChainPrev = (page, sectors) => {
   const steps = sectorChain(sectors)
   return steps[steps.indexOf(page) - 1]
 }
+
+const ANOTHER_ORG = 'Another organisation applies PPPs on our behalf'
+
+// Pages a check-answers Change can lead on to, and whether each is answered.
+// Pages not listed here count as answered.
+const answered = {
+  'third-party': (d) => filled(d['third-party-name']),
+  'agri-subsectors': (d) =>
+    toArray(d['agri-subsector']).length > 0 ||
+    filled(d['agri-subsector-other']),
+  'amenity-subsectors': (d) =>
+    toArray(d['amenity-subsector']).length > 0 ||
+    filled(d['amenity-subsector-other']),
+  'horti-subsectors': (d) =>
+    toArray(d['horti-subsector']).length > 0 ||
+    filled(d['horti-subsector-other']),
+  // Optional page: submitting it always sends the Other box, even when empty.
+  'assurance-schemes': (d) =>
+    d['assurance-schemes-other'] !== undefined ||
+    toArray(d['assurance-schemes']).length > 0,
+  'store-own-address-lookup': (d) => filled(d['store-postcode']),
+  'store-3rd-party-contact': (d) => filled(d['store-3p-name']),
+  quantity: (d) => filled(d.quantity),
+  'import-store-own-address-lookup': (d) => filled(d['import-store-postcode']),
+  'import-store-3rd-party-contact': (d) => filled(d['import-store-3p-name']),
+  'import-quantity': (d) => filled(d['import-quantity']),
+  'sell-pro-products': (d) => filled(d['sell-pro-products']),
+  'sell-pro-quantity': (d) => filled(d['sell-pro-quantity']),
+  'sell-pro-sites': (d) => filled(d['sell-pro-sites']),
+  'sell-amateur-quantity': (d) => filled(d['sell-amateur-quantity'])
+}
+
+// Go to the first of `steps` (the rest of the route). After a check-answers
+// Change, go to the first unanswered step instead, keeping returnTo set, or
+// straight back to check answers when every step is answered.
+const goNext = (req, res, steps) => {
+  const d = req.session.data
+  const pending =
+    d.returnTo && steps.find((page) => answered[page] && !answered[page](d))
+  if (pending) return res.redirect(P + '/' + pending)
+  res.redirect(P + '/' + (consumeReturnTo(req) || steps[0]))
+}
+
+// Accepting a lookup result replaces any manually entered address.
+const clearManualAddress = (d, prefix) =>
+  ['line-1', 'line-2', 'town', 'country'].forEach(
+    (field) => delete d[prefix + '-' + field]
+  )
 
 // The page before a storage quantity page, following the storage answers.
 // Manual entry is recognised by its address line 1, as on the check-answers page.
@@ -55,6 +103,12 @@ const storageBack = (d, f) => {
 // Back links that depend on the path taken. Templates use
 // `pathBackLink or <default>`.
 const pathBack = {
+  sector: (d) =>
+    d['who-applies'] === ANOTHER_ORG ? 'third-party' : 'who-applies',
+  'sell-amateur-contact-details': (d) =>
+    filled(d['sell-ho-line-1'])
+      ? 'sell-amateur-head-office-manual-address'
+      : 'sell-amateur-head-office-address-lookup-result',
   'amenity-subsectors': (d) =>
     sectorChainPrev('amenity-subsectors', toArray(d.sector)),
   'horti-subsectors': (d) =>
@@ -118,7 +172,9 @@ const activityDone = (act, d) => {
     case 'storing-only':
       return filled(d['store-only-quantity'])
     case 'selling':
-      return filled(d['sell-pro-sites']) || filled(d['sell-amateur-quantity'])
+      return d['sell-use-type'] === 'Mostly professional use'
+        ? filled(d['sell-pro-sites'])
+        : filled(d['sell-amateur-quantity'])
     default:
       return true
   }
@@ -306,6 +362,20 @@ module.exports = (router) => {
     res.redirect(P + '/address-lookup-result')
   })
 
+  // "Use this address": save the prototype's sample result as the main address.
+  router.post(P + '/address-lookup-result', (req, res) => {
+    const d = req.session.data
+    Object.assign(d, {
+      'address-line-1': d['lookup-building'] || 'Pesticides House',
+      'address-line-2': 'Chemical close',
+      'address-town': 'City',
+      'address-postcode': d['lookup-postcode'] || 'AA3 1AB',
+      'address-country': 'England'
+    })
+    delete d['international-address']
+    res.redirect(P + '/' + (consumeReturnTo(req) || 'contact-details'))
+  })
+
   router.post(P + '/main-address', (req, res) => {
     const d = req.session.data
     const v = validate([
@@ -331,6 +401,7 @@ module.exports = (router) => {
       }
     ])
     if (!v.ok) return res.render(view('main-address'), v)
+    delete d['international-address']
     const back = consumeReturnTo(req)
     if (back) return res.redirect(P + '/' + back)
     res.redirect(P + '/contact-details')
@@ -391,12 +462,11 @@ module.exports = (router) => {
       }
     ])
     if (!v.ok) return res.render(view('who-applies'), v)
-    const back = consumeReturnTo(req)
-    if (back) return res.redirect(P + '/' + back)
-    if (answer === 'Another organisation applies PPPs on our behalf') {
-      return res.redirect(P + '/third-party')
-    }
-    res.redirect(P + '/sector')
+    goNext(
+      req,
+      res,
+      answer === ANOTHER_ORG ? ['third-party', 'sector'] : ['sector']
+    )
   })
 
   // Third-party applicator details (reached when another org applies) → sector.
@@ -448,9 +518,7 @@ module.exports = (router) => {
       }
     ])
     if (!v.ok) return res.render(view('sector'), v)
-    const back = consumeReturnTo(req)
-    if (back) return res.redirect(P + '/' + back)
-    res.redirect(P + '/' + sectorChainNext(null, sectors))
+    goNext(req, res, sectorChainAfter('sector', sectors))
   })
 
   // Agricultural subsectors (shown when Agriculture is a selected sector).
@@ -466,11 +534,7 @@ module.exports = (router) => {
       }
     ])
     if (!v.ok) return res.render(view('agri-subsectors'), v)
-    const back = consumeReturnTo(req)
-    if (back) return res.redirect(P + '/' + back)
-    res.redirect(
-      P + '/' + sectorChainNext('agri-subsectors', toArray(d.sector))
-    )
+    goNext(req, res, sectorChainAfter('agri-subsectors', toArray(d.sector)))
   })
 
   // Amenity subsectors (shown when Amenity is a selected sector).
@@ -486,11 +550,7 @@ module.exports = (router) => {
       }
     ])
     if (!v.ok) return res.render(view('amenity-subsectors'), v)
-    const back = consumeReturnTo(req)
-    if (back) return res.redirect(P + '/' + back)
-    res.redirect(
-      P + '/' + sectorChainNext('amenity-subsectors', toArray(d.sector))
-    )
+    goNext(req, res, sectorChainAfter('amenity-subsectors', toArray(d.sector)))
   })
 
   // Horticultural subsectors (shown when Horticulture is a selected sector).
@@ -506,11 +566,7 @@ module.exports = (router) => {
       }
     ])
     if (!v.ok) return res.render(view('horti-subsectors'), v)
-    const back = consumeReturnTo(req)
-    if (back) return res.redirect(P + '/' + back)
-    res.redirect(
-      P + '/' + sectorChainNext('horti-subsectors', toArray(d.sector))
-    )
+    goNext(req, res, sectorChainAfter('horti-subsectors', toArray(d.sector)))
   })
 
   router.post(P + '/activity-at-address', (req, res) => {
@@ -550,15 +606,13 @@ module.exports = (router) => {
   })
 
   // Assurance schemes (optional, no validation) → next in the sector chain.
-  router.post(P + '/assurance-schemes', (req, res) => {
-    const back = consumeReturnTo(req)
-    if (back) return res.redirect(P + '/' + back)
-    res.redirect(
-      P +
-        '/' +
-        sectorChainNext('assurance-schemes', toArray(req.session.data.sector))
+  router.post(P + '/assurance-schemes', (req, res) =>
+    goNext(
+      req,
+      res,
+      sectorChainAfter('assurance-schemes', toArray(req.session.data.sector))
     )
-  })
+  )
 
   // Do you store products you apply? Branch: own sites → where; 3rd party →
   // contact; don't store → quantity.
@@ -572,15 +626,14 @@ module.exports = (router) => {
       }
     ])
     if (!v.ok) return res.render(view('store-applied'), v)
-    const back = consumeReturnTo(req)
-    if (back) return res.redirect(P + '/' + back)
+    // Own sites always asks where, as check answers shows both in one row.
     if (answer === 'Yes, at sites we own') {
       return res.redirect(P + '/storing-where')
     }
     if (answer === 'Yes, a third party stores them for us') {
-      return res.redirect(P + '/store-3rd-party-contact')
+      return goNext(req, res, ['store-3rd-party-contact', 'quantity'])
     }
-    res.redirect(P + '/quantity')
+    goNext(req, res, ['quantity'])
   })
 
   // Third-party storage contact → quantity.
@@ -626,12 +679,10 @@ module.exports = (router) => {
       }
     ])
     if (!v.ok) return res.render(view('storing-where'), v)
-    const back = consumeReturnTo(req)
-    if (back) return res.redirect(P + '/' + back)
     if (answer === 'Main business address') {
-      return res.redirect(P + '/quantity')
+      return goNext(req, res, ['quantity'])
     }
-    res.redirect(P + '/store-own-address-lookup')
+    goNext(req, res, ['store-own-address-lookup', 'quantity'])
   })
 
   // Storage location chooser: "Find an address" and Continue both go to the
@@ -650,9 +701,12 @@ module.exports = (router) => {
       }
     ])
     if (!v.ok) return res.render(view('store-own-address-search'), v)
-    const back = consumeReturnTo(req)
-    if (back) return res.redirect(P + '/' + back)
     res.redirect(P + '/store-own-address-result')
+  })
+
+  router.post(P + '/store-own-address-result', (req, res) => {
+    clearManualAddress(req.session.data, 'store')
+    res.redirect(P + '/' + (consumeReturnTo(req) || 'quantity'))
   })
 
   // Storage location entered manually → quantity.
@@ -751,12 +805,14 @@ module.exports = (router) => {
       }
     ])
     if (!v.ok) return res.render(view('sell'), v)
-    const back = consumeReturnTo(req)
-    if (back) return res.redirect(P + '/' + back)
     if (answer === 'Mostly amateur use') {
-      return res.redirect(P + '/sell-amateur-quantity')
+      return goNext(req, res, ['sell-amateur-quantity'])
     }
-    res.redirect(P + '/sell-pro-products')
+    goNext(req, res, [
+      'sell-pro-products',
+      'sell-pro-quantity',
+      'sell-pro-sites'
+    ])
   })
 
   router.post(P + '/sell-pro-products', (req, res) => {
@@ -768,9 +824,7 @@ module.exports = (router) => {
       }
     ])
     if (!v.ok) return res.render(view('sell-pro-products'), v)
-    const back = consumeReturnTo(req)
-    if (back) return res.redirect(P + '/' + back)
-    res.redirect(P + '/sell-pro-quantity')
+    goNext(req, res, ['sell-pro-quantity', 'sell-pro-sites'])
   })
 
   router.post(P + '/sell-amateur-quantity', (req, res) => {
@@ -805,9 +859,7 @@ module.exports = (router) => {
       }
     ])
     if (!v.ok) return res.render(view('sell-pro-quantity'), v)
-    const back = consumeReturnTo(req)
-    if (back) return res.redirect(P + '/' + back)
-    res.redirect(P + '/sell-pro-sites')
+    goNext(req, res, ['sell-pro-sites'])
   })
 
   router.post(P + '/sell-pro-sites', (req, res) => {
@@ -848,10 +900,18 @@ module.exports = (router) => {
     ])
     if (!v.ok)
       return res.render(view('sell-amateur-head-office-lookup-search'), v)
-    const back = consumeReturnTo(req)
-    if (back) return res.redirect(P + '/' + back)
     res.redirect(P + '/sell-amateur-head-office-address-lookup-result')
   })
+
+  router.post(
+    P + '/sell-amateur-head-office-address-lookup-result',
+    (req, res) => {
+      clearManualAddress(req.session.data, 'sell-ho')
+      res.redirect(
+        P + '/' + (consumeReturnTo(req) || 'sell-amateur-contact-details')
+      )
+    }
+  )
 
   router.post(P + '/sell-amateur-head-office-manual-address', (req, res) => {
     const d = req.session.data
@@ -1090,15 +1150,17 @@ module.exports = (router) => {
       }
     ])
     if (!v.ok) return res.render(view('import-storing'), v)
-    const back = consumeReturnTo(req)
-    if (back) return res.redirect(P + '/' + back)
+    // Own sites always asks where, as check answers shows both in one row.
     if (answer === 'Yes, at sites we own') {
       return res.redirect(P + '/import-storing-where')
     }
     if (answer === 'Yes, a third party stores them on our behalf') {
-      return res.redirect(P + '/import-store-3rd-party-contact')
+      return goNext(req, res, [
+        'import-store-3rd-party-contact',
+        'import-quantity'
+      ])
     }
-    res.redirect(P + '/import-quantity')
+    goNext(req, res, ['import-quantity'])
   })
 
   // Third-party storage contact (import) → quantity.
@@ -1139,12 +1201,10 @@ module.exports = (router) => {
       }
     ])
     if (!v.ok) return res.render(view('import-storing-where'), v)
-    const back = consumeReturnTo(req)
-    if (back) return res.redirect(P + '/' + back)
     if (answer === 'Main business address') {
-      return res.redirect(P + '/import-quantity')
+      return goNext(req, res, ['import-quantity'])
     }
-    res.redirect(P + '/import-store-own-address-lookup')
+    goNext(req, res, ['import-store-own-address-lookup', 'import-quantity'])
   })
 
   // Storage location chooser (import), as for the Using journey.
@@ -1162,9 +1222,12 @@ module.exports = (router) => {
       }
     ])
     if (!v.ok) return res.render(view('import-store-own-address-search'), v)
-    const back = consumeReturnTo(req)
-    if (back) return res.redirect(P + '/' + back)
     res.redirect(P + '/import-store-own-address-result')
+  })
+
+  router.post(P + '/import-store-own-address-result', (req, res) => {
+    clearManualAddress(req.session.data, 'import-store')
+    res.redirect(P + '/' + (consumeReturnTo(req) || 'import-quantity'))
   })
 
   // Storage location entered manually → quantity.
@@ -1392,8 +1455,7 @@ module.exports = (router) => {
       usingAgri: sectors.includes('Agriculture'),
       usingAmenity: sectors.includes('Amenity'),
       usingHorti: sectors.includes('Horticulture'),
-      usingAnotherOrg:
-        d['who-applies'] === 'Another organisation applies PPPs on our behalf',
+      usingAnotherOrg: d['who-applies'] === ANOTHER_ORG,
       usingAssurance:
         sectors.includes('Agriculture') || sectors.includes('Horticulture'),
       usingStoreOwnSites: d['store-applied'] === 'Yes, at sites we own',

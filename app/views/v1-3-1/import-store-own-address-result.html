@@ -23,18 +23,23 @@
       City, {{ data["import-store-postcode"] or "AA3 1AB" }}
     </div>
 
-    <div class="govuk-button-group">
-      {{ govukButton({ text: "Use this address", href: basePath +
-      "/import-quantity" }) }}
-      <span class="govuk-body"
-        >or
-        <a
-          class="govuk-link"
-          href="{{ basePath }}/import-store-own-address-manual"
-          >enter an address manually</a
-        ></span
-      >
-    </div>
+    <form
+      method="post"
+      action="{{ basePath }}/import-store-own-address-result"
+      novalidate
+    >
+      <div class="govuk-button-group">
+        {{ govukButton({ text: "Use this address" }) }}
+        <span class="govuk-body"
+          >or
+          <a
+            class="govuk-link"
+            href="{{ basePath }}/import-store-own-address-manual"
+            >enter an address manually</a
+          ></span
+        >
+      </div>
+    </form>
   </div>
 </div>
 {% endblock %}

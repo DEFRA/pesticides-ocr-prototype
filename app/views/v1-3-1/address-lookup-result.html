@@ -22,16 +22,21 @@
       {{ data["lookup-postcode"] or "AA3 1AB" }}
     </div>
 
-    <div class="govuk-button-group">
-      {{ govukButton({ text: "Use this address", href: basePath +
-      "/contact-details" }) }}
-      <span class="govuk-body"
-        >or
-        <a class="govuk-link" href="{{ basePath }}/main-address"
-          >enter an address manually</a
-        ></span
-      >
-    </div>
+    <form
+      method="post"
+      action="{{ basePath }}/address-lookup-result"
+      novalidate
+    >
+      <div class="govuk-button-group">
+        {{ govukButton({ text: "Use this address" }) }}
+        <span class="govuk-body"
+          >or
+          <a class="govuk-link" href="{{ basePath }}/main-address"
+            >enter an address manually</a
+          ></span
+        >
+      </div>
+    </form>
   </div>
 </div>
 {% endblock %}

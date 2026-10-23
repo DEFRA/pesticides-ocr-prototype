@@ -22,7 +22,8 @@ content %}
 
     {% set businessActivitiesHtml %}{{ labelled(data.activities, activityLabels)
     }}{% endset %} {% set mainAddressHtml %}{% if data["international-address"]
-    %}{{ data["international-address"] | replace("\n", "<br />") | safe }}{%
+    %}{{ data["international-address"] | escape | replace("\n", "<br />") |
+    safe }}{%
     else %}{{ data["address-line-1"] }}{% if data["address-line-2"] %}<br />{{
     data["address-line-2"] }}{% endif %}<br />{{ data["address-town"] }}<br />{{
     data["address-postcode"] }}<br />{{ data["address-country"] }}{% endif %}{%

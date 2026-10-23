@@ -22,18 +22,23 @@
       City, {{ data["sell-ho-postcode"] or "AA3 1AB" }}
     </div>
 
-    <div class="govuk-button-group">
-      {{ govukButton({ text: "Use this address", href: basePath +
-      "/sell-amateur-contact-details" }) }}
-      <span class="govuk-body"
-        >or
-        <a
-          class="govuk-link"
-          href="{{ basePath }}/sell-amateur-head-office-manual-address"
-          >enter an address manually</a
-        ></span
-      >
-    </div>
+    <form
+      method="post"
+      action="{{ basePath }}/sell-amateur-head-office-address-lookup-result"
+      novalidate
+    >
+      <div class="govuk-button-group">
+        {{ govukButton({ text: "Use this address" }) }}
+        <span class="govuk-body"
+          >or
+          <a
+            class="govuk-link"
+            href="{{ basePath }}/sell-amateur-head-office-manual-address"
+            >enter an address manually</a
+          ></span
+        >
+      </div>
+    </form>
   </div>
 </div>
 {% endblock %}

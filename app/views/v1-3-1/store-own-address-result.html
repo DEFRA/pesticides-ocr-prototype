@@ -20,16 +20,21 @@
       {{ data["store-postcode"] or "AA3 1AB" }}
     </div>
 
-    <div class="govuk-button-group">
-      {{ govukButton({ text: "Use this address", href: basePath + "/quantity" })
-      }}
-      <span class="govuk-body"
-        >or
-        <a class="govuk-link" href="{{ basePath }}/store-own-address-manual"
-          >enter an address manually</a
-        ></span
-      >
-    </div>
+    <form
+      method="post"
+      action="{{ basePath }}/store-own-address-result"
+      novalidate
+    >
+      <div class="govuk-button-group">
+        {{ govukButton({ text: "Use this address" }) }}
+        <span class="govuk-body"
+          >or
+          <a class="govuk-link" href="{{ basePath }}/store-own-address-manual"
+            >enter an address manually</a
+          ></span
+        >
+      </div>
+    </form>
   </div>
 </div>
 {% endblock %}
