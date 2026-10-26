@@ -69,7 +69,13 @@ const answered = {
   'sell-pro-products': (d) => filled(d['sell-pro-products']),
   'sell-pro-quantity': (d) => filled(d['sell-pro-quantity']),
   'sell-pro-sites': (d) => filled(d['sell-pro-sites']),
-  'sell-amateur-quantity': (d) => filled(d['sell-amateur-quantity'])
+  'sell-amateur-quantity': (d) => filled(d['sell-amateur-quantity']),
+  'address-lookup': (d) =>
+    filled(d['address-postcode']) || filled(d['international-address']),
+  'contact-details': (d) => filled(d['contact-name']),
+  'sell-amateur-head-office-address-lookup': (d) =>
+    filled(d['sell-ho-postcode']),
+  'sell-amateur-contact-details': (d) => filled(d['sell-contact-name'])
 }
 
 // Go to the first of `steps` (the rest of the route). After a check-answers
@@ -100,9 +106,25 @@ const storageBack = (d, f) => {
   return f.storePage
 }
 
+// Selling-only skips the common address/contact pages (business-name → sell).
+// Amateur sellers give a head office address and contact in the Sell flow;
+// professional sellers go on to the main address and contact pages.
+const isSellingOnly = (activities) =>
+  activities.length === 1 && activities[0] === 'selling'
+const isSellPro = (d) => d['sell-use-type'] === 'Mostly professional use'
+const sellingOnlyAddressSteps = (d) =>
+  isSellPro(d)
+    ? ['address-lookup', 'contact-details']
+    : [
+        'sell-amateur-head-office-address-lookup',
+        'sell-amateur-contact-details'
+      ]
+
 // Back links that depend on the path taken. Templates use
 // `pathBackLink or <default>`.
 const pathBack = {
+  'address-lookup': (d) =>
+    isSellingOnly(toArray(d.activities)) ? 'sell-pro-sites' : 'business-name',
   sector: (d) =>
     d['who-applies'] === ANOTHER_ORG ? 'third-party' : 'who-applies',
   'sell-amateur-contact-details': (d) =>
@@ -190,11 +212,6 @@ const nextUnanswered = (activities, d) => {
   }
   return 'check-answers'
 }
-
-// Selling-only skips the common address/contact pages (business-name → sell), so
-// the Sell flow itself collects the head-office address and contact when true.
-const isSellingOnly = (activities) =>
-  activities.length === 1 && activities[0] === 'selling'
 
 // Inverse of activityEntry: entry page → activity, for the entry-page back link.
 const entryActivity = Object.fromEntries(
@@ -373,7 +390,7 @@ module.exports = (router) => {
       'address-country': 'England'
     })
     delete d['international-address']
-    res.redirect(P + '/' + (consumeReturnTo(req) || 'contact-details'))
+    goNext(req, res, ['contact-details'])
   })
 
   router.post(P + '/main-address', (req, res) => {
@@ -402,13 +419,11 @@ module.exports = (router) => {
     ])
     if (!v.ok) return res.render(view('main-address'), v)
     delete d['international-address']
-    const back = consumeReturnTo(req)
-    if (back) return res.redirect(P + '/' + back)
-    res.redirect(P + '/contact-details')
+    goNext(req, res, ['contact-details'])
   })
 
-  // Main business address outside Great Britain (free-text) — reached from the
-  // "outside of Great Britain" link on the manual address page.
+  // Main business address outside Great Britain (free-text). Not linked from
+  // any page for now.
   router.post(P + '/address-international', (req, res) => {
     const v = validate([
       {
@@ -418,9 +433,7 @@ module.exports = (router) => {
       }
     ])
     if (!v.ok) return res.render(view('address-international'), v)
-    const back = consumeReturnTo(req)
-    if (back) return res.redirect(P + '/' + back)
-    res.redirect(P + '/contact-details')
+    goNext(req, res, ['contact-details'])
   })
 
   router.post(P + '/contact-details', (req, res) => {
@@ -791,9 +804,8 @@ module.exports = (router) => {
 
   // --- Selling PPPs journey (Figma 1.3) -----------------------------------
   // PPP use type splits into a professional branch (products → quantity → sites)
-  // and an amateur branch (quantity → …). Selling-only additionally collects the
-  // head-office address and contact within this flow. (Downstream pages are wired
-  // as the remaining Sell screens land.)
+  // and an amateur branch (quantity). Selling-only then collects the address and
+  // contact (see sellingOnlyAddressSteps).
   router.post(P + '/sell', (req, res) => {
     const answer = req.session.data['sell-use-type']
     const v = validate([
@@ -805,13 +817,18 @@ module.exports = (router) => {
       }
     ])
     if (!v.ok) return res.render(view('sell'), v)
+    const d = req.session.data
+    const addressSteps = isSellingOnly(toArray(d.activities))
+      ? sellingOnlyAddressSteps(d)
+      : []
     if (answer === 'Mostly amateur use') {
-      return goNext(req, res, ['sell-amateur-quantity'])
+      return goNext(req, res, ['sell-amateur-quantity', ...addressSteps])
     }
     goNext(req, res, [
       'sell-pro-products',
       'sell-pro-quantity',
-      'sell-pro-sites'
+      'sell-pro-sites',
+      ...addressSteps
     ])
   })
 
@@ -836,13 +853,11 @@ module.exports = (router) => {
       }
     ])
     if (!v.ok) return res.render(view('sell-amateur-quantity'), v)
+    if (isSellingOnly(toArray(req.session.data.activities))) {
+      return goNext(req, res, sellingOnlyAddressSteps(req.session.data))
+    }
     const back = consumeReturnTo(req)
     if (back) return res.redirect(P + '/' + back)
-    // Selling-only skipped the common address/contact pages, so collect the head
-    // office address next; otherwise those were already captured → next activity.
-    if (isSellingOnly(toArray(req.session.data.activities))) {
-      return res.redirect(P + '/sell-amateur-head-office-address-lookup')
-    }
     res.redirect(
       P +
         '/' +
@@ -871,12 +886,11 @@ module.exports = (router) => {
       }
     ])
     if (!v.ok) return res.render(view('sell-pro-sites'), v)
+    if (isSellingOnly(toArray(req.session.data.activities))) {
+      return goNext(req, res, sellingOnlyAddressSteps(req.session.data))
+    }
     const back = consumeReturnTo(req)
     if (back) return res.redirect(P + '/' + back)
-    // Selling-only collects the head office address + contact within this flow.
-    if (isSellingOnly(toArray(req.session.data.activities))) {
-      return res.redirect(P + '/sell-amateur-head-office-address-lookup')
-    }
     res.redirect(
       P +
         '/' +
@@ -884,8 +898,8 @@ module.exports = (router) => {
     )
   })
 
-  // Head office address (used by both Sell branches when selling-only). "Find an
-  // address" → postcode search; "enter manually" links to the manual page.
+  // Head office address (amateur sellers, selling-only). "Find an address" →
+  // postcode search; "enter manually" links to the manual page.
   router.post(P + '/sell-amateur-head-office-address-lookup', (req, res) =>
     res.redirect(P + '/sell-amateur-head-office-lookup-search')
   )
@@ -907,9 +921,7 @@ module.exports = (router) => {
     P + '/sell-amateur-head-office-address-lookup-result',
     (req, res) => {
       clearManualAddress(req.session.data, 'sell-ho')
-      res.redirect(
-        P + '/' + (consumeReturnTo(req) || 'sell-amateur-contact-details')
-      )
+      goNext(req, res, ['sell-amateur-contact-details'])
     }
   )
 
@@ -939,9 +951,7 @@ module.exports = (router) => {
     ])
     if (!v.ok)
       return res.render(view('sell-amateur-head-office-manual-address'), v)
-    const back = consumeReturnTo(req)
-    if (back) return res.redirect(P + '/' + back)
-    res.redirect(P + '/sell-amateur-contact-details')
+    goNext(req, res, ['sell-amateur-contact-details'])
   })
 
   router.post(P + '/sell-amateur-contact-details', (req, res) => {
@@ -1423,7 +1433,7 @@ module.exports = (router) => {
     const d = req.session.data || {}
     const sectors = toArray(d.sector)
     const acts = toArray(d.activities)
-    const sellPro = d['sell-use-type'] === 'Mostly professional use'
+    const sellPro = isSellPro(d)
     const sellSellingOnly = isSellingOnly(acts)
     // Back link → the final page of the LAST selected activity's flow.
     const lastPage = {
@@ -1434,7 +1444,9 @@ module.exports = (router) => {
       distributing: '/distribute-quantity',
       'storing-only': '/store-only-quantity',
       selling: sellSellingOnly
-        ? '/sell-amateur-contact-details'
+        ? sellPro
+          ? '/contact-details'
+          : '/sell-amateur-contact-details'
         : sellPro
           ? '/sell-pro-sites'
           : '/sell-amateur-quantity'
@@ -1473,11 +1485,10 @@ module.exports = (router) => {
         d['import-storing'] === 'Yes, at sites we own' &&
         d['import-storing-where'] ===
           'A different location to the main business address',
-      // Selling PPPs section. Selling-only collected the head-office address +
-      // contact in the Sell flow, so business-details shows those, not the common
-      // ones.
+      // Selling PPPs section. Amateur selling-only gave a head office address and
+      // contact in the Sell flow, so business details shows those instead.
       sellPro: sellPro,
-      sellSellingOnly: sellSellingOnly
+      sellHeadOffice: sellSellingOnly && !sellPro
     })
   })
 

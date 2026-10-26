@@ -44,7 +44,7 @@ content %}
     (businessRows.push({ key: { text: "Business name" }, value: { text:
     data["business-name"] }, actions: { items: [{ href: basePath +
     "/business-name?returnTo=check-answers", text: "Change", visuallyHiddenText:
-    "business name" }] } }), businessRows) %} {% if sellSellingOnly %} {% set
+    "business name" }] } }), businessRows) %} {% if sellHeadOffice %} {% set
     businessRows = (businessRows.push({ key: { text: "Head office address" },
     value: { html: headOfficeHtml }, actions: { items: [{ href: basePath +
     "/sell-amateur-head-office-address-lookup?returnTo=check-answers", text:
@@ -255,9 +255,9 @@ content %}
     sellProVolText | trim }, actions: { items: [{ href: basePath +
     "/sell-pro-quantity?returnTo=check-answers", text: "Change",
     visuallyHiddenText: "volume sold in the last year" }] } }), sellRows) %} {%
-    set sellRows = (sellRows.push({ key: { text: "How many sites?" }, value: { text: data["sell-pro-sites"] }, actions: {
+    set sellRows = (sellRows.push({ key: { text: "How many sites do you sell from?" }, value: { text: data["sell-pro-sites"] }, actions: {
     items: [{ href: basePath + "/sell-pro-sites?returnTo=check-answers", text: "Change",
-    visuallyHiddenText: "how many sites you sell at" }] } }), sellRows) %} {% else
+    visuallyHiddenText: "how many sites you sell from" }] } }), sellRows) %} {% else
     %} {% set sellRows = (sellRows.push({ key: { text: "Volume of PPPs and
     ingredients or adjuvants sold in the last year" }, value: { text:
     sellAmateurVolText | trim }, actions: { items: [{ href: basePath +

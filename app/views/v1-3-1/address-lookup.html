@@ -3,7 +3,7 @@
 "govuk/components/button/macro.njk" import govukButton %} {% from
 "govuk/components/error-summary/macro.njk" import govukErrorSummary %} {% set
 pageName = "What is the main address for your business or organisation?" %} {%
-set backLink = basePath + "/business-name" %} {% block content %}
+set backLink = pathBackLink or (basePath + "/business-name") %} {% block content %}
 <div class="govuk-grid-row">
   <div class="govuk-grid-column-two-thirds">
     {% if errorList %}{{ govukErrorSummary({ titleText: "There is a problem",
