@@ -75,7 +75,8 @@ const answered = {
   'contact-details': (d) => filled(d['contact-name']),
   'sell-amateur-head-office-address-lookup': (d) =>
     filled(d['sell-ho-postcode']),
-  'sell-amateur-contact-details': (d) => filled(d['sell-contact-name'])
+  'sell-amateur-contact-details': (d) => filled(d['sell-contact-name']),
+  sell: (d) => activityDone('selling', d)
 }
 
 // Go to the first of `steps` (the rest of the route). After a check-answers
@@ -106,7 +107,7 @@ const storageBack = (d, f) => {
   return f.storePage
 }
 
-// Selling-only skips the common address/contact pages (business-name → sell).
+// Selling-only collects the address and contact after the Sell flow, not before.
 const isSellingOnly = (activities) =>
   activities.length === 1 && activities[0] === 'selling'
 const isSellPro = (d) => d['sell-use-type'] === 'Mostly professional use'
@@ -315,20 +316,18 @@ module.exports = (router) => {
     ]
     const d = req.session.data
     d.activities = activities
-    const back = consumeReturnTo(req)
-    // Changed from the CYA (returnTo set): collect any address and contact the
-    // new selection needs, then walk the first activity with no answers yet.
-    // Selling-only collects them after the Sell flow instead.
-    if (back) {
-      const sellingOnly = isSellingOnly(activities)
-      const next = nextUnanswered(activities, d)
-      const addressSteps = sellingOnly
-        ? sellingOnlyAddressSteps(d)
-        : ['address-lookup', 'contact-details']
-      const missingAddress =
-        (!sellingOnly || next === 'check-answers') &&
-        addressSteps.find((page) => !answered[page](d))
-      return res.redirect(P + '/' + (missingAddress || next))
+    if (isSellingOnly(activities) && d.returnTo) {
+      return goNext(req, res, ['sell', ...sellingOnlyAddressSteps(d)])
+    }
+    // Changed from the CYA: collect a missing main address or contact, then walk
+    // the first activity with no answers yet.
+    if (consumeReturnTo(req)) {
+      const missingAddress = ['address-lookup', 'contact-details'].find(
+        (page) => !answered[page](d)
+      )
+      return res.redirect(
+        P + '/' + (missingAddress || nextUnanswered(activities, d))
+      )
     }
     res.redirect(P + '/business-name')
   })
@@ -1437,23 +1436,12 @@ module.exports = (router) => {
     const sellPro = isSellPro(d)
     const sellSellingOnly = isSellingOnly(acts)
     // Back link → the final page of the LAST selected activity's flow.
-    const lastPage = {
-      using: '/quantity',
-      manufacturing: '/manufacture-quantity',
-      importing: '/import-quantity',
-      processing: '/process-quantity',
-      distributing: '/distribute-quantity',
-      'storing-only': '/store-only-quantity',
-      selling:
-        '/' +
-        (sellSellingOnly
-          ? sellingOnlyAddressSteps(d).at(-1)
-          : lastPageOfActivity('selling', d))
-    }
     const flowActs = acts.filter((a) => activityEntry[a])
-    const lastAct = flowActs[flowActs.length - 1]
+    const lastPage = sellSellingOnly
+      ? sellingOnlyAddressSteps(d).at(-1)
+      : lastPageOfActivity(flowActs[flowActs.length - 1], d)
     res.render(view('check-answers'), {
-      cyaBack: P + (lastPage[lastAct] || '/quantity'),
+      cyaBack: P + '/' + (lastPage || 'quantity'),
       // Resolved "where do you store" label lines (kept out of the template so
       // the formatter can't split the multi-word map keys used for lookup)
       usingStoringWhereText:
