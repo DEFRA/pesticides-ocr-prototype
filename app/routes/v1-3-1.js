@@ -254,9 +254,10 @@ module.exports = (router) => {
 
   // On an activity entry page that isn't the first in the chain, point Back at the
   // previous selected activity's final page (entry pages otherwise default Back to
-  // contact-details). Templates use `entryBackLink or <default>`.
+  // contact-details). Templates use `entryBackLink or <default>`. Set for POSTs
+  // too, so a page re-rendered with errors keeps the same back link.
   router.use((req, res, next) => {
-    if (req.method === 'GET' && req.path.startsWith(P + '/')) {
+    if (req.path.startsWith(P + '/')) {
       const act = entryActivity[req.path.slice(P.length + 1).replace(/\/$/, '')]
       const acts = toArray(
         req.session.data && req.session.data.activities
