@@ -12,6 +12,7 @@ const {
   consumeReturnTo,
   clearAdditionalAddressFields
 } = require('./journey-helpers')
+const { findAddresses, filterByBuilding, serviceError } = require('./os-places')
 
 const V = 'v1-4'
 const P = '/' + V // URL prefix for redirects
@@ -112,6 +113,130 @@ const lastPageOfActivity = (act, d) => {
 // Confirmation: the whole registration is covered by ONE reference number,
 // however many activities were selected (sample ref — prototype only, for UR).
 const REGISTRATION_REF = 'PPP-409-28G'
+
+// OS Places address lookup: search page → select page (more than one match) →
+// result page → `next`. "Use this address" copies the chosen address into the
+// same fields the manual page fills, so check-answers shows it either way.
+// The select and result pages share templates in includes/, given this config
+// as `lookup`.
+const addressLookup = (router, lookup) => {
+  const resultsKey = lookup.name + '-lookup-results'
+  const selectedKey = lookup.name + '-lookup-selected'
+  const choiceField = lookup.name + '-address-choice'
+  const locals = { lookup: { ...lookup, resultsKey, selectedKey, choiceField } }
+  const renderSearch = (res, extra) =>
+    res.render(view(lookup.search), { ...locals, ...extra })
+
+  router.post(P + '/' + lookup.search, async (req, res) => {
+    const d = req.session.data
+    delete d[resultsKey]
+    delete d[selectedKey]
+
+    const postcode = d[lookup.searchFields.postcode]
+    const building = d[lookup.searchFields.building]
+    const v = validate([
+      {
+        field: lookup.searchFields.postcode,
+        message: 'Enter a postcode',
+        valid: filled(postcode)
+      }
+    ])
+    if (!v.ok) return renderSearch(res, v)
+
+    let addresses
+    try {
+      addresses = await findAddresses(postcode)
+    } catch (err) {
+      console.error('Address lookup failed for postcode ' + postcode, err)
+      return renderSearch(res, serviceError(err))
+    }
+
+    if (filled(building)) addresses = filterByBuilding(addresses, building)
+    if (addresses.length === 0) {
+      return renderSearch(
+        res,
+        validate([
+          {
+            field: lookup.searchFields.postcode,
+            message: 'No addresses found',
+            valid: false
+          }
+        ])
+      )
+    }
+
+    d[resultsKey] = addresses
+    if (addresses.length === 1) {
+      d[selectedKey] = addresses[0]
+      return res.redirect(P + '/' + lookup.result)
+    }
+    res.redirect(P + '/' + lookup.select)
+  })
+
+  router.get(P + '/' + lookup.select, (req, res) => {
+    if (!req.session.data[resultsKey]) {
+      return res.redirect(P + '/' + lookup.search)
+    }
+    res.render(view('includes/address-select'), locals)
+  })
+
+  router.post(P + '/' + lookup.select, (req, res) => {
+    const d = req.session.data
+    const chosen = (d[resultsKey] || []).find((a) => a.uprn === d[choiceField])
+    const v = validate([
+      {
+        field: choiceField,
+        message: 'Select an address',
+        valid: Boolean(chosen)
+      }
+    ])
+    if (!v.ok) {
+      return res.render(view('includes/address-select'), { ...locals, ...v })
+    }
+    d[selectedKey] = chosen
+    res.redirect(P + '/' + lookup.result)
+  })
+
+  router.get(P + '/' + lookup.result, (req, res) => {
+    if (!req.session.data[selectedKey]) {
+      return res.redirect(P + '/' + lookup.search)
+    }
+    res.render(view('includes/address-result'), locals)
+  })
+
+  router.post(P + '/' + lookup.result, (req, res) => {
+    const d = req.session.data
+    const address = d[selectedKey]
+    if (!address) return res.redirect(P + '/' + lookup.search)
+    const fields = lookup.addressFields
+    const [line1, ...rest] = address.lines
+    d[fields.line1] = line1
+    d[fields.line2] = rest.join(', ')
+    d[fields.town] = address.town
+    d[fields.postcode] = address.postcode
+    d[fields.country] = address.country
+    for (const field of lookup.clear || []) delete d[field]
+    const back = consumeReturnTo(req)
+    if (back) return res.redirect(P + '/' + back)
+    res.redirect(P + '/' + lookup.next)
+  })
+}
+
+// Search and address field names for a lookup whose manual page uses
+// <prefix>-line-1, <prefix>-town etc, eg store-line-1.
+const prefixedFields = (prefix) => ({
+  searchFields: {
+    postcode: prefix + '-postcode',
+    building: prefix + '-building'
+  },
+  addressFields: {
+    line1: prefix + '-line-1',
+    line2: prefix + '-line-2',
+    town: prefix + '-town',
+    postcode: prefix + '-postcode',
+    country: prefix + '-country'
+  }
+})
 
 module.exports = (router) => {
   // Bare version root → the version's start page. Without this, /v1-2 has no
@@ -228,19 +353,23 @@ module.exports = (router) => {
     res.redirect(P + '/address-lookup')
   })
 
-  // Business address lookup (Figma 1.3). "Enter an address manually" is a direct
-  // link to /main-address. "Find an address" would lead to a results/select page
-  // — that screen is pending, so for now it proceeds to the manual page.
-  router.post(P + '/address-lookup', (req, res) => {
-    const v = validate([
-      {
-        field: 'lookup-postcode',
-        message: 'Enter a postcode',
-        valid: filled(req.session.data['lookup-postcode'])
-      }
-    ])
-    if (!v.ok) return res.render(view('address-lookup'), v)
-    res.redirect(P + '/address-lookup-result')
+  addressLookup(router, {
+    name: 'main',
+    heading: 'What is the main address for your business or organisation?',
+    search: 'address-lookup',
+    select: 'address-lookup-select',
+    result: 'address-lookup-result',
+    manual: 'main-address',
+    searchFields: { postcode: 'lookup-postcode', building: 'lookup-building' },
+    addressFields: {
+      line1: 'address-line-1',
+      line2: 'address-line-2',
+      town: 'address-town',
+      postcode: 'address-postcode',
+      country: 'address-country'
+    },
+    clear: ['international-address'],
+    next: 'contact-details'
   })
 
   router.post(P + '/main-address', (req, res) => {
@@ -571,19 +700,16 @@ module.exports = (router) => {
     res.redirect(P + '/store-own-address-lookup')
   })
 
-  // Storage location lookup (own, different location) → address result.
-  router.post(P + '/store-own-address-lookup', (req, res) => {
-    const v = validate([
-      {
-        field: 'store-postcode',
-        message: 'Enter a postcode',
-        valid: filled(req.session.data['store-postcode'])
-      }
-    ])
-    if (!v.ok) return res.render(view('store-own-address-lookup'), v)
-    const back = consumeReturnTo(req)
-    if (back) return res.redirect(P + '/' + back)
-    res.redirect(P + '/store-own-address-result')
+  // Storage location lookup (own, different location) → quantity.
+  addressLookup(router, {
+    name: 'store',
+    heading: 'What is the location where you store PPPs?',
+    search: 'store-own-address-lookup',
+    select: 'store-own-address-select',
+    result: 'store-own-address-result',
+    manual: 'store-own-address-manual',
+    ...prefixedFields('store'),
+    next: 'quantity'
   })
 
   // Storage location entered manually → quantity.
@@ -741,19 +867,15 @@ module.exports = (router) => {
     res.redirect(P + '/sell-amateur-head-office-lookup-search')
   )
 
-  router.post(P + '/sell-amateur-head-office-lookup-search', (req, res) => {
-    const v = validate([
-      {
-        field: 'sell-ho-postcode',
-        message: 'Enter a postcode',
-        valid: filled(req.session.data['sell-ho-postcode'])
-      }
-    ])
-    if (!v.ok)
-      return res.render(view('sell-amateur-head-office-lookup-search'), v)
-    const back = consumeReturnTo(req)
-    if (back) return res.redirect(P + '/' + back)
-    res.redirect(P + '/sell-amateur-head-office-address-lookup-result')
+  addressLookup(router, {
+    name: 'sell-ho',
+    heading: 'What is the address for your head office?',
+    search: 'sell-amateur-head-office-lookup-search',
+    select: 'sell-amateur-head-office-address-lookup-select',
+    result: 'sell-amateur-head-office-address-lookup-result',
+    manual: 'sell-amateur-head-office-manual-address',
+    ...prefixedFields('sell-ho'),
+    next: 'sell-amateur-contact-details'
   })
 
   router.post(P + '/sell-amateur-head-office-manual-address', (req, res) => {
@@ -1008,19 +1130,16 @@ module.exports = (router) => {
     res.redirect(P + '/import-store-own-address-search')
   })
 
-  // Storage location postcode search → results.
-  router.post(P + '/import-store-own-address-search', (req, res) => {
-    const v = validate([
-      {
-        field: 'import-store-postcode',
-        message: 'Enter a postcode',
-        valid: filled(req.session.data['import-store-postcode'])
-      }
-    ])
-    if (!v.ok) return res.render(view('import-store-own-address-search'), v)
-    const back = consumeReturnTo(req)
-    if (back) return res.redirect(P + '/' + back)
-    res.redirect(P + '/import-store-own-address-result')
+  // Storage location postcode search → import quantity.
+  addressLookup(router, {
+    name: 'import-store',
+    heading: 'What is the location where you store PPPs?',
+    search: 'import-store-own-address-search',
+    select: 'import-store-own-address-select',
+    result: 'import-store-own-address-result',
+    manual: 'import-store-own-address-manual',
+    ...prefixedFields('import-store'),
+    next: 'import-quantity'
   })
 
   // Storage location entered manually → quantity.
