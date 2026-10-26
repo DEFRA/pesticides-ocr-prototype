@@ -107,8 +107,6 @@ const storageBack = (d, f) => {
 }
 
 // Selling-only skips the common address/contact pages (business-name → sell).
-// Amateur sellers give a head office address and contact in the Sell flow;
-// professional sellers go on to the main address and contact pages.
 const isSellingOnly = (activities) =>
   activities.length === 1 && activities[0] === 'selling'
 const isSellPro = (d) => d['sell-use-type'] === 'Mostly professional use'
@@ -124,7 +122,9 @@ const sellingOnlyAddressSteps = (d) =>
 // `pathBackLink or <default>`.
 const pathBack = {
   'address-lookup': (d) =>
-    isSellingOnly(toArray(d.activities)) ? 'sell-pro-sites' : 'business-name',
+    isSellingOnly(toArray(d.activities)) && isSellPro(d)
+      ? 'sell-pro-sites'
+      : 'business-name',
   sector: (d) =>
     d['who-applies'] === ANOTHER_ORG ? 'third-party' : 'who-applies',
   'sell-amateur-contact-details': (d) =>
@@ -194,7 +194,7 @@ const activityDone = (act, d) => {
     case 'storing-only':
       return filled(d['store-only-quantity'])
     case 'selling':
-      return d['sell-use-type'] === 'Mostly professional use'
+      return isSellPro(d)
         ? filled(d['sell-pro-sites'])
         : filled(d['sell-amateur-quantity'])
     default:
@@ -220,9 +220,7 @@ const entryActivity = Object.fromEntries(
 // The final page of an activity's flow (Sell varies by pro/amateur).
 const lastPageOfActivity = (act, d) => {
   if (act === 'selling') {
-    return d['sell-use-type'] === 'Mostly professional use'
-      ? 'sell-pro-sites'
-      : 'sell-amateur-quantity'
+    return isSellPro(d) ? 'sell-pro-sites' : 'sell-amateur-quantity'
   }
   return {
     using: 'quantity',
@@ -315,14 +313,22 @@ module.exports = (router) => {
       ...clickOrder.filter((a) => activities.includes(a)),
       ...activities.filter((a) => !clickOrder.includes(a))
     ]
-    req.session.data.activities = activities
+    const d = req.session.data
+    d.activities = activities
     const back = consumeReturnTo(req)
-    // Changed from the CYA (returnTo set): walk the first newly-selected activity
-    // that has no answers yet, otherwise fall back to where we came from (the CYA).
+    // Changed from the CYA (returnTo set): collect any address and contact the
+    // new selection needs, then walk the first activity with no answers yet.
+    // Selling-only collects them after the Sell flow instead.
     if (back) {
-      return res.redirect(
-        P + '/' + nextUnanswered(activities, req.session.data)
-      )
+      const sellingOnly = isSellingOnly(activities)
+      const next = nextUnanswered(activities, d)
+      const addressSteps = sellingOnly
+        ? sellingOnlyAddressSteps(d)
+        : ['address-lookup', 'contact-details']
+      const missingAddress =
+        (!sellingOnly || next === 'check-answers') &&
+        addressSteps.find((page) => !answered[page](d))
+      return res.redirect(P + '/' + (missingAddress || next))
     }
     res.redirect(P + '/business-name')
   })
@@ -353,20 +359,15 @@ module.exports = (router) => {
     const back = consumeReturnTo(req)
     if (back) return res.redirect(P + '/' + back)
 
-    // Special case (Figma 1.3): if selling is the ONLY activity, skip the common
-    // address/contact pages and go straight to the Sell section. Everyone else
-    // follows the common route (address lookup next).
-    const activities = toArray(req.session.data.activities)
-    const sellingOnly = activities.length === 1 && activities[0] === 'selling'
-    // TODO: /sell = Sell-section entry, /main-address = common address lookup —
-    // both wired to their real 1.3 pages as those screens land.
-    if (sellingOnly) return res.redirect(P + '/sell')
+    // Selling-only goes straight to the Sell section (see sellingOnlyAddressSteps).
+    if (isSellingOnly(toArray(req.session.data.activities))) {
+      return res.redirect(P + '/sell')
+    }
     res.redirect(P + '/address-lookup')
   })
 
   // Business address lookup (Figma 1.3). "Enter an address manually" is a direct
-  // link to /main-address. "Find an address" would lead to a results/select page
-  // — that screen is pending, so for now it proceeds to the manual page.
+  // link to /main-address.
   router.post(P + '/address-lookup', (req, res) => {
     const v = validate([
       {
@@ -1443,13 +1444,11 @@ module.exports = (router) => {
       processing: '/process-quantity',
       distributing: '/distribute-quantity',
       'storing-only': '/store-only-quantity',
-      selling: sellSellingOnly
-        ? sellPro
-          ? '/contact-details'
-          : '/sell-amateur-contact-details'
-        : sellPro
-          ? '/sell-pro-sites'
-          : '/sell-amateur-quantity'
+      selling:
+        '/' +
+        (sellSellingOnly
+          ? sellingOnlyAddressSteps(d).at(-1)
+          : lastPageOfActivity('selling', d))
     }
     const flowActs = acts.filter((a) => activityEntry[a])
     const lastAct = flowActs[flowActs.length - 1]
