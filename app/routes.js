@@ -20,6 +20,7 @@ const router = govukPrototypeKit.requests.setupRouter()
 require('./routes/v1-1')(router)
 require('./routes/v1-2')(router)
 require('./routes/v1-3')(router)
+require('./routes/v1-3-1')(router)
 require('./routes/v1-4')(router)
 
 // Safety net for stray/old URLs.
