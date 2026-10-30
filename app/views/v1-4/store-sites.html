@@ -4,7 +4,7 @@
 {% from "govuk/components/button/macro.njk" import govukButton %}
 {% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
 {% set pageName = "Which of your sites store PPPs?" %}
-{% set backLink = pathBackLink or (basePath + "/store-applied") %}
+{% set backLink = returnBackLink or pathBackLink or (basePath + "/store-applied") %}
 {% set mainAddress = data["address-line-1"] or "your main business address" %}
 
 {% block content %}

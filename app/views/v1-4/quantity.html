@@ -4,7 +4,7 @@
 {% from "govuk/components/button/macro.njk" import govukButton %}
 {% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
 {% set pageName = "What quantity of PPPs or adjuvants do you use in a typical year?" %}
-{% set backLink = pathBackLink or (basePath + "/store-applied") %}
+{% set backLink = returnBackLink or pathBackLink or (basePath + "/store-applied") %}
 {% set bands = ["1 to 29", "30 to 59", "60 to 149", "150 to 399", "400 and over"] %}
 
 {% block content %}

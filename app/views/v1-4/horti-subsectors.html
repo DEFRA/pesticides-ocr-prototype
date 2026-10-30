@@ -7,5 +7,5 @@
 {% set hint = "Select all that apply" %}
 {% set otherHint = "Describe your main type of work in a few words" %}
 {% set items = [{ value: "Edible protected crops" }, { value: "Orchards" }, { value: "Ornamental Plants" }, { value: "Soft Fruits – Outdoor and Protected" }, { value: "Viticulture" }] %}
-{% set backLink = pathBackLink or (basePath + "/sector") %}
+{% set backLink = returnBackLink or pathBackLink or (basePath + "/sector") %}
 {% block content %}{% include "v1-4/includes/checkbox-page.html" %}{% endblock %}

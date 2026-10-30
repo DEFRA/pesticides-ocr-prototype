@@ -4,7 +4,7 @@
 {% from "govuk/components/button/macro.njk" import govukButton %}
 {% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
 {% set pageName = "What is the total value of amateur PPPs your business sells in a typical year?" %}
-{% set backLink = pathBackLink or (basePath + "/activities") %}
+{% set backLink = returnBackLink or pathBackLink or (basePath + "/activities") %}
 
 {% block content %}
 <div class="govuk-grid-row">

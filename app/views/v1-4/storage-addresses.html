@@ -13,23 +13,22 @@
     {% if errorList %}{{ govukErrorSummary({ titleText: "There is a problem", errorList: errorList }) }}{% endif %}
     <h1 class="govuk-heading-l">Additional storage addresses</h1>
     {% for address in data["storage-addresses"] %}
-      {% set addressHtml %}{% for line in [address.line1, address.line2, address.town, address.postcode, address.country] %}{% if line %}{{ line }}<br>{% endif %}{% endfor %}{% endset %}
+      {% set addressHtml %}{% for line in [address.line1, address.line2, address.town, address.postcode, address.country] | select %}{{ line }}{% if not loop.last %}<br>{% endif %}{% endfor %}{% endset %}
       {{ govukSummaryList({
         card: {
           title: { text: "Storage address " + loop.index },
-          actions: { items: [{ href: basePath + "/storage-addresses/remove/" + loop.index0, text: "Remove", visuallyHiddenText: "storage address " + loop.index }] }
+          actions: { items: [{ href: basePath + "/storage-addresses/remove/" + loop.index0, text: "Remove" }] }
         },
         rows: [{
           key: { text: "Storage site" },
           value: { html: addressHtml },
-          actions: { items: [{ href: basePath + "/store-own-address-manual?edit=" + loop.index0, text: "Change", visuallyHiddenText: "storage address " + loop.index }] }
+          actions: { items: [{ href: basePath + "/store-own-address-manual?edit=" + loop.index0, text: "Change", visuallyHiddenText: "storage site" }] }
         }]
       }) }}
     {% endfor %}
     <form method="post" action="{{ basePath }}/storage-addresses" novalidate>
       {{ govukRadios({
         name: "add-another-address",
-        classes: "govuk-radios--inline",
         fieldset: { legend: { text: "Do you want to add another address?", classes: "govuk-fieldset__legend--m" } },
         errorMessage: { text: errors["add-another-address"] } if errors["add-another-address"],
         items: [{ value: "Yes", text: "Yes" }, { value: "No", text: "No" }]

@@ -1,5 +1,4 @@
-{# A summary list of registration rows ({ key, lines, change }), with Change
-links when `changeLinks` is set. #}
+{# A summary list of registration rows ({ key, lines, change }). #}
 {% from "govuk/components/summary-list/macro.njk" import govukSummaryList %}
 {% set listRows = [] %}
 {% for row in rows %}
@@ -7,7 +6,7 @@ links when `changeLinks` is set. #}
   {% set listRows = (listRows.push({
     key: { text: row.key },
     value: { html: valueHtml },
-    actions: { items: [{ href: basePath + "/" + row.change + "?returnTo=check-answers", text: "Change", visuallyHiddenText: row.key | lower }] } if changeLinks
+    actions: { items: [{ href: basePath + "/" + row.change + "?returnTo=check-answers", text: "Change", visuallyHiddenText: row.key | lower }] }
   }), listRows) %}
 {% endfor %}
 {{ govukSummaryList({ rows: listRows }) }}

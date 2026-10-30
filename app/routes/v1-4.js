@@ -1,15 +1,23 @@
 //
-// OCR register journey — version 1.4 (Figma master, "Future OCR register flow
-// v1.4"). Mounted under /v1-4. Covers users of professional PPPs and sellers of
-// amateur PPPs, with contact details and email verification first.
+// OCR register journey — version 1.4 (Figma "Future OCR register flow v1.4").
 //
-const {
-  toArray,
-  filled,
-  validate,
-  consumeReturnTo
-} = require('./journey-helpers')
+const { filled, validate, consumeReturnTo } = require('./journey-helpers')
 const { findAddresses, filterByBuilding, serviceError } = require('./os-places')
+const {
+  STORE_NONE,
+  SITE_ANOTHER,
+  SUBSECTORS,
+  activities,
+  storedAt,
+  storeSites,
+  storageAddresses,
+  addressFrom,
+  setAddress,
+  addressFieldNames,
+  activityRoute,
+  answered,
+  registrationSummary
+} = require('./v1-4-answers')
 const { registrationPdf } = require('./v1-4-pdf')
 
 const V = 'v1-4'
@@ -19,22 +27,7 @@ const view = (name) => V + '/' + name
 const SERVICE_NAME = 'Register work involving pesticides'
 const REGISTRATION_REF = 'PPP-409-28G'
 
-const USING = 'using'
-const SELLING = 'selling'
-const ACTIVITY_LABELS = {
-  [USING]: 'Using PPPs as part of your work',
-  [SELLING]: 'Seller of amateur plant protection products'
-}
-
-const ANOTHER_ORG = 'Another organisation applies PPPs on our behalf'
-const STORE_OWN = 'At sites we own'
-const STORE_THIRD_PARTY = 'By a third party on our behalf'
-const STORE_NONE = 'We do not store PPPs'
-const SITE_MAIN = 'main'
-const SITE_ANOTHER = 'another'
-
-// Sample contact details for a participant who opens the email link in a
-// browser that has none, so check answers still reads as a real registration.
+// For a participant who opens the email link in a browser with no answers.
 const SAMPLE_CONTACT = {
   'contact-name': 'John Smith',
   'contact-job-title': 'Head of PPPs',
@@ -42,72 +35,13 @@ const SAMPLE_CONTACT = {
   'contact-email': 'john@pesticides.co.uk'
 }
 
-const sectors = (d) => toArray(d.sector)
-const hasSector = (d, sector) => sectors(d).includes(sector)
-const activities = (d) => toArray(d.activities)
-const storedAt = (d) => toArray(d['store-applied'])
-const storeSites = (d) => toArray(d['store-sites'])
-const storageAddresses = (d) => d['storage-addresses'] || []
-
-// The pages of the activity flows, in order, for the answers so far.
-const usingRoute = (d) => [
-  'who-applies',
-  ...(d['who-applies'] === ANOTHER_ORG ? ['third-party'] : []),
-  'sector',
-  ...(hasSector(d, 'Agriculture') ? ['agri-subsectors'] : []),
-  ...(hasSector(d, 'Amenity') ? ['amenity-subsectors'] : []),
-  ...(hasSector(d, 'Horticulture') ? ['horti-subsectors'] : []),
-  ...(hasSector(d, 'Agriculture') || hasSector(d, 'Horticulture')
-    ? ['assurance-schemes']
-    : []),
-  'store-applied',
-  ...(storedAt(d).includes(STORE_OWN) ? ['store-sites'] : []),
-  ...(storedAt(d).includes(STORE_OWN) && storeSites(d).includes(SITE_ANOTHER)
-    ? ['storage-addresses']
-    : []),
-  ...(storedAt(d).includes(STORE_THIRD_PARTY)
-    ? ['store-3rd-party-contact']
-    : []),
-  'quantity'
-]
-const activityRoute = (d) => [
-  ...(activities(d).includes(USING) ? usingRoute(d) : []),
-  ...(activities(d).includes(SELLING) ? ['sell-amateur-quantity'] : [])
-]
 const routeAfter = (d, page) => {
   const route = activityRoute(d)
   return route.slice(route.indexOf(page) + 1)
 }
 
-// Whether each activity page has been answered, so a check answers Change can
-// walk only the pages a new answer needs.
-const answered = {
-  'who-applies': (d) => filled(d['who-applies']),
-  'third-party': (d) => filled(d['third-party-name']),
-  sector: (d) => sectors(d).length > 0 || filled(d['sector-other']),
-  'agri-subsectors': (d) =>
-    toArray(d['agri-subsector']).length > 0 ||
-    filled(d['agri-subsector-other']),
-  'amenity-subsectors': (d) =>
-    toArray(d['amenity-subsector']).length > 0 ||
-    filled(d['amenity-subsector-other']),
-  'horti-subsectors': (d) =>
-    toArray(d['horti-subsector']).length > 0 ||
-    filled(d['horti-subsector-other']),
-  // Optional page: submitting it always sends the Other box, even when empty.
-  'assurance-schemes': (d) =>
-    d['assurance-schemes-other'] !== undefined ||
-    toArray(d['assurance-schemes']).length > 0,
-  'store-applied': (d) => storedAt(d).length > 0,
-  'store-sites': (d) => storeSites(d).length > 0,
-  'storage-addresses': (d) => storageAddresses(d).length > 0,
-  'store-3rd-party-contact': (d) => filled(d['store-3p-name']),
-  quantity: (d) => filled(d.quantity),
-  'sell-amateur-quantity': (d) => filled(d['sell-amateur-quantity'])
-}
-
 // On to the first of `steps`, or check answers. After a check answers Change,
-// to the first unanswered step instead (keeping returnTo), or straight back.
+// to the first unanswered step (keeping returnTo), or straight back.
 const goNext = (req, res, steps) => {
   const d = req.session.data
   const pending =
@@ -116,220 +50,76 @@ const goNext = (req, res, steps) => {
   res.redirect(P + '/' + (consumeReturnTo(req) || steps[0] || 'check-answers'))
 }
 
-// Back links for the activity pages follow the route taken.
-const activityBack = (d, page) => {
-  const route = activityRoute(d)
-  const index = route.indexOf(page)
-  return index > 0 ? route[index - 1] : 'activities'
+const manualAddressRules = (d, prefix) => [
+  {
+    field: prefix + '-line-1',
+    message: 'Enter address line 1',
+    valid: filled(d[prefix + '-line-1'])
+  },
+  {
+    field: prefix + '-town',
+    message: 'Enter a town or city',
+    valid: filled(d[prefix + '-town'])
+  },
+  {
+    field: prefix + '-postcode',
+    message: 'Enter a postcode',
+    valid: filled(d[prefix + '-postcode'])
+  },
+  {
+    field: prefix + '-country',
+    message: 'Select a country',
+    valid: filled(d[prefix + '-country'])
+  }
+]
+
+const contactRules = (d, prefix) => [
+  {
+    field: prefix + '-name',
+    message: 'Enter a contact name',
+    valid: filled(d[prefix + '-name'])
+  },
+  {
+    field: prefix + '-telephone',
+    message: 'Enter a telephone number',
+    valid: filled(d[prefix + '-telephone'])
+  },
+  {
+    field: prefix + '-email',
+    message: 'Enter an email address',
+    valid: filled(d[prefix + '-email'])
+  }
+]
+
+const saveMainAddress = (d, address) => {
+  setAddress(d, 'address', address)
+  delete d['international-address']
 }
 
-// Check answers rows, shared with the PDF download. Each row is
-// { key, lines, change }, where change is the page the Change link opens.
-const addressLines = (address) =>
-  [
-    address.line1,
-    address.line2,
-    address.town,
-    address.postcode,
-    address.country
-  ].filter(filled)
-const mainAddressLines = (d) =>
-  filled(d['international-address'])
-    ? d['international-address'].split(/\r?\n/).filter(filled)
-    : addressLines({
-        line1: d['address-line-1'],
-        line2: d['address-line-2'],
-        town: d['address-town'],
-        postcode: d['address-postcode'],
-        country: d['address-country']
-      })
-const withOther = (values, other) => [
-  ...toArray(values),
-  ...(filled(other) ? [other] : [])
+// A storage address being changed from its card replaces that card; any other
+// is added to the list.
+const saveStorageAddress = (d, address) => {
+  const list = [...storageAddresses(d)]
+  const index = Number(d['store-editing'])
+  if (Number.isInteger(index) && index < list.length) {
+    list[index] = address
+  } else {
+    list.push(address)
+  }
+  d['storage-addresses'] = list
+}
+const STORAGE_FORM_FIELDS = [
+  ...addressFieldNames('store'),
+  'store-building',
+  'store-editing'
 ]
-
-const businessRows = (d) => [
-  {
-    key: 'Business PPP activities',
-    lines: activities(d).map((activity) => ACTIVITY_LABELS[activity]),
-    change: 'activities'
-  },
-  {
-    key: 'Business name',
-    lines: [d['business-name']],
-    change: 'business-name'
-  },
-  { key: 'Main address', lines: mainAddressLines(d), change: 'address-lookup' },
-  {
-    key: 'Contact name',
-    lines: [d['contact-name']],
-    change: 'contact-details'
-  },
-  {
-    key: 'Contact role',
-    lines: [d['contact-job-title']],
-    change: 'contact-details'
-  },
-  {
-    key: 'Contact email',
-    lines: [d['contact-email']],
-    change: 'contact-details'
-  },
-  {
-    key: 'Contact telephone',
-    lines: [d['contact-telephone']],
-    change: 'contact-details'
-  }
-]
-
-const storeLocationRows = (d) => {
-  const locations = []
-  if (storedAt(d).includes(STORE_OWN)) {
-    if (storeSites(d).includes(SITE_MAIN)) {
-      locations.push({
-        lines: ['At the main business address'],
-        change: 'store-sites'
-      })
-    }
-    if (storeSites(d).includes(SITE_ANOTHER)) {
-      storageAddresses(d).forEach((address) =>
-        locations.push({
-          lines: addressLines(address),
-          change: 'storage-addresses'
-        })
-      )
-    }
-  }
-  if (storedAt(d).includes(STORE_THIRD_PARTY)) {
-    locations.push({
-      lines: [
-        d['store-3p-name'],
-        d['store-3p-business'],
-        d['store-3p-telephone'],
-        d['store-3p-email']
-      ].filter(filled),
-      change: 'store-3rd-party-contact'
-    })
-  }
-  return locations.map((location, index) => ({
-    key:
-      index === 0 ? 'PPP store location' : 'PPP store location ' + (index + 1),
-    ...location
-  }))
+const clearStorageForm = (d) => {
+  for (const field of STORAGE_FORM_FIELDS) delete d[field]
 }
 
-const subsectorRow = (d, sector, key, prefix, page) =>
-  hasSector(d, sector)
-    ? [
-        {
-          key,
-          lines: withOther(
-            d[prefix + '-subsector'],
-            d[prefix + '-subsector-other']
-          ),
-          change: page
-        }
-      ]
-    : []
-
-const usingRows = (d) => [
-  {
-    key: 'Who applies PPPs?',
-    lines: [d['who-applies']],
-    change: 'who-applies'
-  },
-  ...(d['who-applies'] === ANOTHER_ORG
-    ? [
-        {
-          key: 'Third party details',
-          lines: [
-            d['third-party-name'],
-            ...addressLines({
-              line1: d['third-party-line-1'],
-              line2: d['third-party-line-2'],
-              town: d['third-party-town'],
-              postcode: d['third-party-postcode'],
-              country: d['third-party-country']
-            })
-          ].filter(filled),
-          change: 'third-party'
-        }
-      ]
-    : []),
-  {
-    key: 'Main sectors of work',
-    lines: withOther(d.sector, d['sector-other']),
-    change: 'sector'
-  },
-  ...subsectorRow(
-    d,
-    'Agriculture',
-    'Agriculture sectors',
-    'agri',
-    'agri-subsectors'
-  ),
-  ...subsectorRow(
-    d,
-    'Amenity',
-    'Amenity sectors',
-    'amenity',
-    'amenity-subsectors'
-  ),
-  ...subsectorRow(
-    d,
-    'Horticulture',
-    'Horticulture sectors',
-    'horti',
-    'horti-subsectors'
-  ),
-  ...(hasSector(d, 'Agriculture') || hasSector(d, 'Horticulture')
-    ? [
-        {
-          key: 'Assurance schemes',
-          lines: withOther(
-            d['assurance-schemes'],
-            d['assurance-schemes-other']
-          ),
-          change: 'assurance-schemes'
-        }
-      ]
-    : []),
-  {
-    key: 'Where are PPPs stored?',
-    lines: storedAt(d),
-    change: 'store-applied'
-  },
-  ...storeLocationRows(d),
-  {
-    key: 'Quantity of PPPs or adjuvants used in the last year',
-    lines: filled(d.quantity) ? [d.quantity + ' Kgs/litres'] : [],
-    change: 'quantity'
-  }
-]
-
-const sellingRows = (d) => [
-  {
-    key: 'Total value of PPPs sold in a typical year',
-    lines: filled(d['sell-amateur-quantity'])
-      ? ['£' + d['sell-amateur-quantity']]
-      : [],
-    change: 'sell-amateur-quantity'
-  }
-]
-
-const registrationSummary = (d) => ({
-  businessRows: businessRows(d),
-  usingRows: activities(d).includes(USING) ? usingRows(d) : null,
-  sellingRows: activities(d).includes(SELLING) ? sellingRows(d) : null,
-  // With both activities, check answers and the PDF give each its own heading.
-  bothActivities:
-    activities(d).includes(USING) && activities(d).includes(SELLING)
-})
-
-// OS Places address lookup: search page → select page (more than one match) →
-// result page → `next`. "Use this address" copies the chosen address into the
-// same fields the manual page fills, or hands it to `save` if given. The select
-// and result pages share templates in includes/, given this config as `lookup`.
+// OS Places address lookup: search → select (more than one match) → result →
+// `save` the chosen address, then `next`. The select and result pages share the
+// templates in includes/, given this config as `lookup`.
 const addressLookup = (router, lookup) => {
   const resultsKey = lookup.name + '-lookup-results'
   const selectedKey = lookup.name + '-lookup-selected'
@@ -420,89 +210,15 @@ const addressLookup = (router, lookup) => {
     const address = d[selectedKey]
     if (!address) return res.redirect(P + '/' + lookup.search)
     const [line1, ...rest] = address.lines
-    const chosen = {
+    lookup.save(d, {
       line1,
       line2: rest.join(', '),
       town: address.town,
       postcode: address.postcode,
       country: address.country
-    }
-    if (lookup.save) {
-      lookup.save(d, chosen)
-    } else {
-      const fields = lookup.addressFields
-      d[fields.line1] = chosen.line1
-      d[fields.line2] = chosen.line2
-      d[fields.town] = chosen.town
-      d[fields.postcode] = chosen.postcode
-      d[fields.country] = chosen.country
-    }
-    for (const field of lookup.clear || []) delete d[field]
+    })
     lookup.next(req, res)
   })
-}
-
-// The fields every manual address page shares, as <prefix>-line-1 and so on.
-const manualAddressRules = (d, prefix) => [
-  {
-    field: prefix + '-line-1',
-    message: 'Enter address line 1',
-    valid: filled(d[prefix + '-line-1'])
-  },
-  {
-    field: prefix + '-town',
-    message: 'Enter a town or city',
-    valid: filled(d[prefix + '-town'])
-  },
-  {
-    field: prefix + '-postcode',
-    message: 'Enter a postcode',
-    valid: filled(d[prefix + '-postcode'])
-  },
-  {
-    field: prefix + '-country',
-    message: 'Select a country',
-    valid: filled(d[prefix + '-country'])
-  }
-]
-
-const contactRules = (d, prefix) => [
-  {
-    field: prefix + '-name',
-    message: 'Enter a contact name',
-    valid: filled(d[prefix + '-name'])
-  },
-  {
-    field: prefix + '-telephone',
-    message: 'Enter a telephone number',
-    valid: filled(d[prefix + '-telephone'])
-  },
-  {
-    field: prefix + '-email',
-    message: 'Enter an email address',
-    valid: filled(d[prefix + '-email'])
-  }
-]
-
-const STORAGE_SEARCH_FIELDS = ['store-postcode', 'store-building']
-const STORAGE_MANUAL_FIELDS = [
-  'store-line-1',
-  'store-line-2',
-  'store-town',
-  'store-postcode',
-  'store-country'
-]
-
-// An address being changed from the summary page replaces that one;
-// otherwise the address is added to the list.
-const saveStorageAddress = (d, address) => {
-  const list = [...storageAddresses(d)]
-  const index = d['store-editing']
-  if (index !== undefined && Number(index) < list.length)
-    list[Number(index)] = address
-  else list.push(address)
-  d['storage-addresses'] = list
-  delete d['store-editing']
 }
 
 module.exports = (router) => {
@@ -514,28 +230,42 @@ module.exports = (router) => {
     next()
   })
 
-  // A check answers Change link's ?returnTo=check-answers, kept until the page
-  // it opens is saved.
+  // A Change link's ?returnTo=check-answers is kept until its page is saved,
+  // and until then Back goes to check answers too.
   router.use((req, res, next) => {
-    if (req.path.startsWith(P) && req.query.returnTo && req.session.data) {
-      req.session.data.returnTo = req.query.returnTo
+    const d = req.session.data
+    if (req.path.startsWith(P) && d) {
+      if (req.query.returnTo) d.returnTo = req.query.returnTo
+      if (d.returnTo) res.locals.returnBackLink = P + '/' + d.returnTo
     }
     next()
   })
 
-  // Back links on the activity pages follow the route taken. Set for POSTs
-  // too, so a page shown again with errors keeps it.
+  // Back links on the activity pages follow the route taken, for POSTs too, so
+  // a page shown again with errors keeps it.
   router.use((req, res, next) => {
+    const d = req.session.data
     const page = req.path.startsWith(P + '/')
       ? req.path.slice(P.length + 1).replace(/\/$/, '')
       : ''
-    if (req.session.data && answered[page]) {
-      res.locals.pathBackLink = P + '/' + activityBack(req.session.data, page)
+    const route = d ? activityRoute(d) : []
+    if (route.includes(page)) {
+      const index = route.indexOf(page)
+      res.locals.pathBackLink =
+        P + '/' + (index > 0 ? route[index - 1] : 'activities')
     }
     next()
   })
 
-  // --- Register or update ----------------------------------------------------
+  // Starting again, or arriving at check answers, ends any Change.
+  const endChange = (req, res, next) => {
+    delete req.session.data.returnTo
+    delete res.locals.returnBackLink
+    next()
+  }
+  router.get(P + '/start', endChange)
+
+  // --- Register or update ---------------------------------------------------
   router.post(P + '/register-or-update', (req, res) => {
     const answer = req.session.data['register-or-update']
     const v = validate([
@@ -551,15 +281,14 @@ module.exports = (router) => {
     )
   })
 
-  // --- Contact details and email verification --------------------------------
+  // --- Contact details and email verification -------------------------------
   router.post(P + '/contact-details', (req, res) => {
     const v = validate(contactRules(req.session.data, 'contact'))
     if (!v.ok) return res.render(view('contact-details'), v)
     res.redirect(P + '/' + (consumeReturnTo(req) || 'check-your-email'))
   })
 
-  // The verification link in the email. The user researcher sends the email,
-  // so the link may be opened in a browser with no answers yet.
+  // The link in the verification email, which the user researcher sends.
   router.get(P + '/confirm-email', (req, res) => {
     const d = req.session.data
     if (!filled(d['contact-email'])) Object.assign(d, SAMPLE_CONTACT)
@@ -567,7 +296,7 @@ module.exports = (router) => {
     res.redirect(P + '/business-name')
   })
 
-  // --- Business name and main address ----------------------------------------
+  // --- Business name and main address ---------------------------------------
   router.post(P + '/business-name', (req, res) => {
     const v = validate([
       {
@@ -591,14 +320,7 @@ module.exports = (router) => {
     result: 'address-lookup-result',
     manual: 'main-address',
     searchFields: { postcode: 'lookup-postcode', building: 'lookup-building' },
-    addressFields: {
-      line1: 'address-line-1',
-      line2: 'address-line-2',
-      town: 'address-town',
-      postcode: 'address-postcode',
-      country: 'address-country'
-    },
-    clear: ['international-address'],
+    save: saveMainAddress,
     next: afterMainAddress
   })
 
@@ -606,7 +328,7 @@ module.exports = (router) => {
     const d = req.session.data
     const v = validate(manualAddressRules(d, 'address'))
     if (!v.ok) return res.render(view('main-address'), v)
-    delete d['international-address']
+    saveMainAddress(d, addressFrom(d, 'address'))
     afterMainAddress(req, res)
   })
 
@@ -622,7 +344,7 @@ module.exports = (router) => {
     afterMainAddress(req, res)
   })
 
-  // --- Business activities ---------------------------------------------------
+  // --- Business activities --------------------------------------------------
   router.post(P + '/activities', (req, res) => {
     const d = req.session.data
     const v = validate([
@@ -636,8 +358,7 @@ module.exports = (router) => {
     goNext(req, res, activityRoute(d))
   })
 
-  // --- Using PPPs ------------------------------------------------------------
-  // A page whose answer is required, then on through the rest of the route.
+  // An activity page: check its `rules`, then on through the rest of the route.
   const activityPage = (page, rules) =>
     router.post(P + '/' + page, (req, res) => {
       const d = req.session.data
@@ -646,6 +367,7 @@ module.exports = (router) => {
       goNext(req, res, routeAfter(d, page))
     })
 
+  // --- Using PPPs -----------------------------------------------------------
   activityPage('who-applies', (d) => [
     {
       field: 'who-applies',
@@ -671,36 +393,13 @@ module.exports = (router) => {
     }
   ])
 
-  activityPage('agri-subsectors', (d) => [
-    {
-      field: 'agri-subsector',
-      message:
-        'Select an agricultural sector, or describe your work in the ‘Other’ box',
-      valid: answered['agri-subsectors'](d)
-    }
-  ])
-
-  activityPage('amenity-subsectors', (d) => [
-    {
-      field: 'amenity-subsector',
-      message:
-        'Select an amenity sector, or describe your work in the ‘Other’ box',
-      valid: answered['amenity-subsectors'](d)
-    }
-  ])
-
-  activityPage('horti-subsectors', (d) => [
-    {
-      field: 'horti-subsector',
-      message:
-        'Select a horticultural sector, or describe your work in the ‘Other’ box',
-      valid: answered['horti-subsectors'](d)
-    }
-  ])
+  for (const { page, field, message } of SUBSECTORS) {
+    activityPage(page, (d) => [{ field, message, valid: answered[page](d) }])
+  }
 
   activityPage('assurance-schemes', () => [])
 
-  // --- Storage ---------------------------------------------------------------
+  // --- Storage --------------------------------------------------------------
   activityPage('store-applied', (d) => [
     {
       field: 'store-applied',
@@ -725,7 +424,7 @@ module.exports = (router) => {
       }
     ])
     if (!v.ok) return res.render(view('store-sites'), v)
-    // The first other address goes through the search; its summary comes after.
+    // The first other address goes through the search before its summary.
     if (
       storeSites(d).includes(SITE_ANOTHER) &&
       storageAddresses(d).length === 0
@@ -735,7 +434,10 @@ module.exports = (router) => {
     goNext(req, res, routeAfter(d, 'store-sites'))
   })
 
-  const toStorageSummary = (req, res) => res.redirect(P + '/storage-addresses')
+  const toStorageSummary = (req, res) => {
+    clearStorageForm(req.session.data)
+    res.redirect(P + '/storage-addresses')
+  }
 
   addressLookup(router, {
     name: 'store',
@@ -749,38 +451,39 @@ module.exports = (router) => {
     next: toStorageSummary
   })
 
-  // Opened from a card's Change link (?edit=<index>): show that address. The
-  // kit has already copied the session into res.locals.data for the page, so
-  // both get the address.
-  router.get(P + '/store-own-address-manual', (req, res, next) => {
-    const address = storageAddresses(req.session.data)[Number(req.query.edit)]
+  // A new storage address starts from an empty form, unless a card's Change
+  // link (?edit=<index>) opens that address. The kit has already copied the
+  // session into res.locals.data, so both are updated.
+  const startStorageForm = (req, res, next) => {
+    const d = req.session.data
+    const index = Number(req.query.edit)
+    const address = storageAddresses(d)[index]
+    const form = Object.fromEntries(
+      STORAGE_FORM_FIELDS.map((f) => [f, undefined])
+    )
     if (req.query.edit !== undefined && address) {
-      const editing = {
-        'store-editing': Number(req.query.edit),
-        'store-line-1': address.line1,
-        'store-line-2': address.line2,
-        'store-town': address.town,
-        'store-postcode': address.postcode,
-        'store-country': address.country
+      setAddress(form, 'store', address)
+      form['store-editing'] = index
+    }
+    for (const [field, value] of Object.entries(form)) {
+      if (value === undefined) {
+        delete d[field]
+        delete res.locals.data[field]
+      } else {
+        d[field] = value
+        res.locals.data[field] = value
       }
-      Object.assign(req.session.data, editing)
-      Object.assign(res.locals.data, editing)
     }
     next()
-  })
+  }
+  router.get(P + '/store-own-address-lookup', startStorageForm)
+  router.get(P + '/store-own-address-manual', startStorageForm)
 
   router.post(P + '/store-own-address-manual', (req, res) => {
     const d = req.session.data
     const v = validate(manualAddressRules(d, 'store'))
     if (!v.ok) return res.render(view('store-own-address-manual'), v)
-    saveStorageAddress(d, {
-      line1: d['store-line-1'],
-      line2: d['store-line-2'],
-      town: d['store-town'],
-      postcode: d['store-postcode'],
-      country: d['store-country']
-    })
-    STORAGE_MANUAL_FIELDS.forEach((field) => delete d[field])
+    saveStorageAddress(d, addressFrom(d, 'store'))
     toStorageSummary(req, res)
   })
 
@@ -796,6 +499,7 @@ module.exports = (router) => {
     const list = [...storageAddresses(d)]
     list.splice(Number(req.params.index), 1)
     d['storage-addresses'] = list
+    clearStorageForm(d)
     res.redirect(
       P + '/' + (list.length > 0 ? 'storage-addresses' : 'store-sites')
     )
@@ -813,24 +517,22 @@ module.exports = (router) => {
     if (!v.ok) return res.render(view('storage-addresses'), v)
     const addAnother = d['add-another-address'] === 'Yes'
     delete d['add-another-address']
-    if (addAnother) {
-      ;[...STORAGE_SEARCH_FIELDS, ...STORAGE_MANUAL_FIELDS].forEach(
-        (field) => delete d[field]
-      )
-      delete d['store-editing']
-      return res.redirect(P + '/store-own-address-lookup')
-    }
+    if (addAnother) return res.redirect(P + '/store-own-address-lookup')
     goNext(req, res, routeAfter(d, 'storage-addresses'))
   })
 
-  activityPage('store-3rd-party-contact', (d) => [
-    {
-      field: 'store-3p-business',
-      message: 'Enter the business name',
-      valid: filled(d['store-3p-business'])
-    },
-    ...contactRules(d, 'store-3p')
-  ])
+  activityPage('store-3rd-party-contact', (d) => {
+    const [name, ...rest] = contactRules(d, 'store-3p')
+    return [
+      name,
+      {
+        field: 'store-3p-business',
+        message: 'Enter the business name',
+        valid: filled(d['store-3p-business'])
+      },
+      ...rest
+    ]
+  })
 
   activityPage('quantity', (d) => [
     {
@@ -841,7 +543,7 @@ module.exports = (router) => {
     }
   ])
 
-  // --- Selling amateur PPPs --------------------------------------------------
+  // --- Selling amateur PPPs -------------------------------------------------
   activityPage('sell-amateur-quantity', (d) => [
     {
       field: 'sell-amateur-quantity',
@@ -850,8 +552,8 @@ module.exports = (router) => {
     }
   ])
 
-  // --- Check answers, confirmation and the PDF -------------------------------
-  router.get(P + '/check-answers', (req, res) => {
+  // --- Check answers, confirmation and the PDF ------------------------------
+  router.get(P + '/check-answers', endChange, (req, res) => {
     const d = req.session.data
     const route = activityRoute(d)
     res.render(view('check-answers'), {
@@ -868,17 +570,20 @@ module.exports = (router) => {
     res.render(view('confirmation'), { registrationRef: REGISTRATION_REF })
   )
 
-  router.get(P + '/registration.pdf', (req, res) => {
-    res.setHeader('Content-Type', 'application/pdf')
-    res.setHeader(
-      'Content-Disposition',
-      'attachment; filename="registration-' + REGISTRATION_REF + '.pdf"'
-    )
-    registrationPdf(res, {
-      serviceName: SERVICE_NAME,
-      reference: REGISTRATION_REF,
-      registeredOn: new Date(),
-      ...registrationSummary(req.session.data)
-    })
+  router.get(P + '/registration.pdf', async (req, res, next) => {
+    try {
+      const pdf = await registrationPdf({
+        serviceName: SERVICE_NAME,
+        reference: REGISTRATION_REF,
+        registeredOn: new Date(),
+        ...registrationSummary(req.session.data)
+      })
+      res
+        .type('application/pdf')
+        .attachment('registration-' + REGISTRATION_REF + '.pdf')
+        .send(pdf)
+    } catch (err) {
+      next(err)
+    }
   })
 }

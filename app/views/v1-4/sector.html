@@ -13,5 +13,5 @@
   { value: "Forestry and Trees", hint: "This includes tree plantations, Christmas trees, woodland management, commercial timber, tree nurseries, tree maintenance" },
   { value: "Horticulture", hint: "This includes edible protected crops, orchards and soft fruit, and ornamentals." }
 ] %}
-{% set backLink = pathBackLink or (basePath + "/who-applies") %}
+{% set backLink = returnBackLink or pathBackLink or (basePath + "/who-applies") %}
 {% block content %}{% include "v1-4/includes/checkbox-page.html" %}{% endblock %}

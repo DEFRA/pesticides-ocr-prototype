@@ -12,5 +12,5 @@
   { value: "Soil Association Organic", hint: "This includes certified organic farming, growing or processing schemes." },
   { value: "Scottish Quality Crops (SQC)", hint: "For businesses operating under Scottish quality crop assurance guidelines." }
 ] %}
-{% set backLink = pathBackLink or (basePath + "/sector") %}
+{% set backLink = returnBackLink or pathBackLink or (basePath + "/sector") %}
 {% block content %}{% include "v1-4/includes/checkbox-page.html" %}{% endblock %}

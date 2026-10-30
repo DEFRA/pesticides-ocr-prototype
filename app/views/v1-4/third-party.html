@@ -4,7 +4,7 @@
 {% from "govuk/components/button/macro.njk" import govukButton %}
 {% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
 {% set pageName = "Who applies PPPs on your behalf?" %}
-{% set backLink = pathBackLink or (basePath + "/who-applies") %}
+{% set backLink = returnBackLink or pathBackLink or (basePath + "/who-applies") %}
 {% set prefix = "third-party" %}
 
 {% block content %}

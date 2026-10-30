@@ -4,7 +4,7 @@
 {% from "govuk/components/button/macro.njk" import govukButton %}
 {% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
 {% set pageName = "Where are the products stored?" %}
-{% set backLink = pathBackLink or (basePath + "/sector") %}
+{% set backLink = returnBackLink or pathBackLink or (basePath + "/sector") %}
 
 {% block content %}
 <div class="govuk-grid-row">

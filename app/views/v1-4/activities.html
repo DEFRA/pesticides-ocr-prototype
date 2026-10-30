@@ -4,7 +4,7 @@
 {% from "govuk/components/button/macro.njk" import govukButton %}
 {% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
 {% set pageName = "Which activities does your organisation carry out?" %}
-{% set backLink = basePath + "/address-lookup" %}
+{% set backLink = returnBackLink or (basePath + "/address-lookup") %}
 
 {% block content %}
 <div class="govuk-grid-row">

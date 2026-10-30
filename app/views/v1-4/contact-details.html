@@ -5,7 +5,7 @@
 {% from "govuk/components/button/macro.njk" import govukButton %}
 {% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
 {% set pageName = "Who should we contact about your PPP activities?" %}
-{% set backLink = basePath + "/register-or-update" %}
+{% set backLink = returnBackLink or (basePath + "/register-or-update") %}
 
 {% block content %}
 <div class="govuk-grid-row">
