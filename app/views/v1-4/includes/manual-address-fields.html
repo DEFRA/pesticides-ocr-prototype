@@ -1,0 +1,17 @@
+{# The fields of a manual address page, named <prefix>-line-1 and so on. #}
+{% from "govuk/components/input/macro.njk" import govukInput %}
+{% from "govuk/components/radios/macro.njk" import govukRadios %}
+{{ govukInput({ label: { text: "Address line 1" }, id: prefix + "-line-1", name: prefix + "-line-1", autocomplete: "address-line1", value: data[prefix + "-line-1"], errorMessage: { text: errors[prefix + "-line-1"] } if errors[prefix + "-line-1"] }) }}
+{{ govukInput({ label: { text: "Address line 2 (optional)" }, id: prefix + "-line-2", name: prefix + "-line-2", autocomplete: "address-line2", value: data[prefix + "-line-2"] }) }}
+{{ govukInput({ label: { text: "Town or city" }, id: prefix + "-town", name: prefix + "-town", autocomplete: "address-level2", classes: "govuk-!-width-two-thirds", value: data[prefix + "-town"], errorMessage: { text: errors[prefix + "-town"] } if errors[prefix + "-town"] }) }}
+{{ govukInput({ label: { text: "Postcode" }, id: prefix + "-postcode", name: prefix + "-postcode", autocomplete: "postal-code", classes: "govuk-input--width-10", value: data[prefix + "-postcode"], errorMessage: { text: errors[prefix + "-postcode"] } if errors[prefix + "-postcode"] }) }}
+{{ govukRadios({
+  name: prefix + "-country",
+  fieldset: { legend: { text: "Country", classes: "govuk-fieldset__legend--s" } },
+  errorMessage: { text: errors[prefix + "-country"] } if errors[prefix + "-country"],
+  items: [
+    { value: "England", text: "England", checked: checked(prefix + "-country", "England") },
+    { value: "Scotland", text: "Scotland", checked: checked(prefix + "-country", "Scotland") },
+    { value: "Wales", text: "Wales", checked: checked(prefix + "-country", "Wales") }
+  ]
+}) }}

@@ -1,0 +1,12 @@
+{# A summary list of registration rows ({ key, lines, change }). #}
+{% from "govuk/components/summary-list/macro.njk" import govukSummaryList %}
+{% set listRows = [] %}
+{% for row in rows %}
+  {% set valueHtml %}{% for line in row.lines %}{{ line }}{% if not loop.last %}<br>{% endif %}{% endfor %}{% endset %}
+  {% set listRows = (listRows.push({
+    key: { text: row.key },
+    value: { html: valueHtml },
+    actions: { items: [{ href: basePath + "/" + row.change + "?returnTo=check-answers", text: "Change", visuallyHiddenText: row.key | lower }] }
+  }), listRows) %}
+{% endfor %}
+{{ govukSummaryList({ rows: listRows }) }}
