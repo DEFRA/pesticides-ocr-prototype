@@ -1,35 +1,27 @@
 {% extends "layouts/main.html" %}
 {% set basePath = "/v1-4" %}
 {% from "govuk/components/panel/macro.njk" import govukPanel %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
 {% set pageName = "Registration complete" %}
+
 {% block content %}
 <div class="govuk-grid-row">
   <div class="govuk-grid-column-two-thirds">
-    {{ govukPanel({
-      titleText: "Registration complete",
-      html: "Your reference number<br /><strong>" + registrationRef + "</strong>"
-    }) }}
-
+    {{ govukPanel({ titleText: "Registration complete", html: "Your reference number<br><strong>" + registrationRef + "</strong>" }) }}
     <p class="govuk-body">We have sent you a confirmation email.</p>
 
-    <h2 class="govuk-heading-m">What happens next</h2>
-    <p class="govuk-body">
-      Your details have been submitted to the Department for Environment, Food
-      &amp; Rural Affairs (Defra) and the Health and Safety Executive (HSE) to
-      update the central register.
-    </p>
-    <p class="govuk-body">
-      You do not need to do anything else. If you selected options for multiple
-      activities or premises, they are all covered under this single reference
-      number. Keep it for your records.
-    </p>
+    <h2 class="govuk-heading-m">Your registration has been recorded</h2>
+    <p class="govuk-body">You do not need to do anything else unless your details change.</p>
 
-    <h2 class="govuk-heading-m">If your details change</h2>
-    <p class="govuk-body">
-      By law, you must keep your registration up to date. If your business
-      changes its name, address, or the types of chemical activities it carries
-      out, you will need to return to this service to update your details.
-    </p>
+    <h2 class="govuk-heading-m">Keep your reference number safe</h2>
+    <p class="govuk-body">You will need this reference number to access and update your registration.</p>
+    <p class="govuk-body">Do not share it with anyone.</p>
+    <p class="govuk-body">This reference number is a unique identifier for your registration. It does not show that your business, products or activities have been approved, certified or endorsed.</p>
+
+    <h2 class="govuk-heading-m">Re-register if your details change</h2>
+    <p class="govuk-body">You must keep your registration up to date. If your business changes its name or address, or the types of pesticide activities it carries out, you must return to this service and update your registration details.</p>
+
+    {{ govukButton({ text: "Download a copy of your registration", href: basePath + "/registration.pdf", classes: "govuk-button--secondary" }) }}
   </div>
 </div>
 {% endblock %}

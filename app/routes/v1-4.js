@@ -1,124 +1,335 @@
 //
-// OCR register journey — version 1.4. Mounted under /v1-4.
-// Starts as an exact copy of 1.3. The 1.4 changes from the content designer's
-// Figma journey (including external sign-in with an email code) are made here
-// only; 1.3 stays frozen as the historic record.
+// OCR register journey — version 1.4 (Figma master, "Future OCR register flow
+// v1.4"). Mounted under /v1-4. Covers users of professional PPPs and sellers of
+// amateur PPPs, with contact details and email verification first.
 //
 const {
   toArray,
   filled,
   validate,
-  isAmateurOnly,
-  consumeReturnTo,
-  clearAdditionalAddressFields
+  consumeReturnTo
 } = require('./journey-helpers')
 const { findAddresses, filterByBuilding, serviceError } = require('./os-places')
+const { registrationPdf } = require('./v1-4-pdf')
 
 const V = 'v1-4'
-const P = '/' + V // URL prefix for redirects
-const view = (name) => V + '/' + name // view path for render (app/views/v1-4/…)
+const P = '/' + V
+const view = (name) => V + '/' + name
 
-// v1.3 sector → subsector → schemes chain (Using journey). A subsector page
-// appears per selected sector (Agriculture/Amenity/Horticulture, in that order);
-// the assurance-schemes page only if Agriculture or Horticulture was selected;
-// then on to store-applied. Given the page just completed (null at the start),
-// return the next page name in the chain.
-const sectorChainNext = (afterPage, sectors) => {
-  const steps = []
-  if (sectors.includes('Agriculture')) steps.push('agri-subsectors')
-  if (sectors.includes('Amenity')) steps.push('amenity-subsectors')
-  if (sectors.includes('Horticulture')) steps.push('horti-subsectors')
-  if (sectors.includes('Agriculture') || sectors.includes('Horticulture')) {
-    steps.push('assurance-schemes')
-  }
-  steps.push('store-applied')
-  return steps[steps.indexOf(afterPage) + 1]
-}
-
-// Entry page for each activity's sub-flow. The common route (activities →
-// business name → address → contact) hands off to the FIRST selected activity's
-// entry; each sub-flow currently ends at check-answers. As more activities land
-// they'll be chained in selection order. Activities without a built flow yet are
-// skipped over. selling-only is handled separately (business-name → /sell).
-const activityEntry = {
-  using: 'who-applies',
-  manufacturing: 'manufacture-products',
-  importing: 'import-products',
-  processing: 'process-products',
-  selling: 'sell',
-  distributing: 'distribute-products',
-  'storing-only': 'store-only-products'
-}
-// Has this activity's flow been completed? (its final answer is in session).
-const activityDone = (act, d) => {
-  switch (act) {
-    case 'using':
-      return filled(d['quantity'])
-    case 'manufacturing':
-      return filled(d['manufacture-quantity'])
-    case 'importing':
-      return filled(d['import-quantity'])
-    case 'processing':
-      return filled(d['process-quantity'])
-    case 'distributing':
-      return filled(d['distribute-quantity'])
-    case 'storing-only':
-      return filled(d['store-only-quantity'])
-    case 'selling':
-      return (
-        filled(d['sell-pro-quantity']) || filled(d['sell-amateur-quantity'])
-      )
-    default:
-      return true
-  }
-}
-
-// The entry page of the first selected activity (selection = checkbox DOM order)
-// that has NOT yet been completed, or check-answers when they all have. Used both
-// to chain multiple activities on a fresh walk and to walk only the newly-added
-// activity when the selection is changed from the check-answers page.
-const nextUnanswered = (activities, d) => {
-  for (const a of activities) {
-    if (activityEntry[a] && !activityDone(a, d)) return activityEntry[a]
-  }
-  return 'check-answers'
-}
-
-// Selling-only skips the common address/contact pages (business-name → sell), so
-// the Sell flow itself collects the head-office address and contact when true.
-const isSellingOnly = (activities) =>
-  activities.length === 1 && activities[0] === 'selling'
-
-// Inverse of activityEntry: entry page → activity, for the entry-page back link.
-const entryActivity = Object.fromEntries(
-  Object.entries(activityEntry).map(([act, page]) => [page, act])
-)
-// The final page of an activity's flow (Sell varies by pro/amateur).
-const lastPageOfActivity = (act, d) => {
-  if (act === 'selling') {
-    return d['sell-use-type'] === 'Mostly professional use'
-      ? 'sell-pro-quantity'
-      : 'sell-amateur-quantity'
-  }
-  return {
-    using: 'quantity',
-    manufacturing: 'manufacture-quantity',
-    importing: 'import-quantity',
-    processing: 'process-quantity',
-    distributing: 'distribute-quantity',
-    'storing-only': 'store-only-quantity'
-  }[act]
-}
-
-// Confirmation: the whole registration is covered by ONE reference number,
-// however many activities were selected (sample ref — prototype only, for UR).
+const SERVICE_NAME = 'Register work involving pesticides'
 const REGISTRATION_REF = 'PPP-409-28G'
+
+const USING = 'using'
+const SELLING = 'selling'
+const ACTIVITY_LABELS = {
+  [USING]: 'Using PPPs as part of your work',
+  [SELLING]: 'Seller of amateur plant protection products'
+}
+
+const ANOTHER_ORG = 'Another organisation applies PPPs on our behalf'
+const STORE_OWN = 'At sites we own'
+const STORE_THIRD_PARTY = 'By a third party on our behalf'
+const STORE_NONE = 'We do not store PPPs'
+const SITE_MAIN = 'main'
+const SITE_ANOTHER = 'another'
+
+// Sample contact details for a participant who opens the email link in a
+// browser that has none, so check answers still reads as a real registration.
+const SAMPLE_CONTACT = {
+  'contact-name': 'John Smith',
+  'contact-job-title': 'Head of PPPs',
+  'contact-telephone': '01234 567890',
+  'contact-email': 'john@pesticides.co.uk'
+}
+
+const sectors = (d) => toArray(d.sector)
+const hasSector = (d, sector) => sectors(d).includes(sector)
+const activities = (d) => toArray(d.activities)
+const storedAt = (d) => toArray(d['store-applied'])
+const storeSites = (d) => toArray(d['store-sites'])
+const storageAddresses = (d) => d['storage-addresses'] || []
+
+// The pages of the activity flows, in order, for the answers so far.
+const usingRoute = (d) => [
+  'who-applies',
+  ...(d['who-applies'] === ANOTHER_ORG ? ['third-party'] : []),
+  'sector',
+  ...(hasSector(d, 'Agriculture') ? ['agri-subsectors'] : []),
+  ...(hasSector(d, 'Amenity') ? ['amenity-subsectors'] : []),
+  ...(hasSector(d, 'Horticulture') ? ['horti-subsectors'] : []),
+  ...(hasSector(d, 'Agriculture') || hasSector(d, 'Horticulture')
+    ? ['assurance-schemes']
+    : []),
+  'store-applied',
+  ...(storedAt(d).includes(STORE_OWN) ? ['store-sites'] : []),
+  ...(storedAt(d).includes(STORE_OWN) && storeSites(d).includes(SITE_ANOTHER)
+    ? ['storage-addresses']
+    : []),
+  ...(storedAt(d).includes(STORE_THIRD_PARTY)
+    ? ['store-3rd-party-contact']
+    : []),
+  'quantity'
+]
+const activityRoute = (d) => [
+  ...(activities(d).includes(USING) ? usingRoute(d) : []),
+  ...(activities(d).includes(SELLING) ? ['sell-amateur-quantity'] : [])
+]
+const routeAfter = (d, page) => {
+  const route = activityRoute(d)
+  return route.slice(route.indexOf(page) + 1)
+}
+
+// Whether each activity page has been answered, so a check answers Change can
+// walk only the pages a new answer needs.
+const answered = {
+  'who-applies': (d) => filled(d['who-applies']),
+  'third-party': (d) => filled(d['third-party-name']),
+  sector: (d) => sectors(d).length > 0 || filled(d['sector-other']),
+  'agri-subsectors': (d) =>
+    toArray(d['agri-subsector']).length > 0 ||
+    filled(d['agri-subsector-other']),
+  'amenity-subsectors': (d) =>
+    toArray(d['amenity-subsector']).length > 0 ||
+    filled(d['amenity-subsector-other']),
+  'horti-subsectors': (d) =>
+    toArray(d['horti-subsector']).length > 0 ||
+    filled(d['horti-subsector-other']),
+  // Optional page: submitting it always sends the Other box, even when empty.
+  'assurance-schemes': (d) =>
+    d['assurance-schemes-other'] !== undefined ||
+    toArray(d['assurance-schemes']).length > 0,
+  'store-applied': (d) => storedAt(d).length > 0,
+  'store-sites': (d) => storeSites(d).length > 0,
+  'storage-addresses': (d) => storageAddresses(d).length > 0,
+  'store-3rd-party-contact': (d) => filled(d['store-3p-name']),
+  quantity: (d) => filled(d.quantity),
+  'sell-amateur-quantity': (d) => filled(d['sell-amateur-quantity'])
+}
+
+// On to the first of `steps`, or check answers. After a check answers Change,
+// to the first unanswered step instead (keeping returnTo), or straight back.
+const goNext = (req, res, steps) => {
+  const d = req.session.data
+  const pending =
+    d.returnTo && steps.find((page) => answered[page] && !answered[page](d))
+  if (pending) return res.redirect(P + '/' + pending)
+  res.redirect(P + '/' + (consumeReturnTo(req) || steps[0] || 'check-answers'))
+}
+
+// Back links for the activity pages follow the route taken.
+const activityBack = (d, page) => {
+  const route = activityRoute(d)
+  const index = route.indexOf(page)
+  return index > 0 ? route[index - 1] : 'activities'
+}
+
+// Check answers rows, shared with the PDF download. Each row is
+// { key, lines, change }, where change is the page the Change link opens.
+const addressLines = (address) =>
+  [
+    address.line1,
+    address.line2,
+    address.town,
+    address.postcode,
+    address.country
+  ].filter(filled)
+const mainAddressLines = (d) =>
+  filled(d['international-address'])
+    ? d['international-address'].split(/\r?\n/).filter(filled)
+    : addressLines({
+        line1: d['address-line-1'],
+        line2: d['address-line-2'],
+        town: d['address-town'],
+        postcode: d['address-postcode'],
+        country: d['address-country']
+      })
+const withOther = (values, other) => [
+  ...toArray(values),
+  ...(filled(other) ? [other] : [])
+]
+
+const businessRows = (d) => [
+  {
+    key: 'Business PPP activities',
+    lines: activities(d).map((activity) => ACTIVITY_LABELS[activity]),
+    change: 'activities'
+  },
+  {
+    key: 'Business name',
+    lines: [d['business-name']],
+    change: 'business-name'
+  },
+  { key: 'Main address', lines: mainAddressLines(d), change: 'address-lookup' },
+  {
+    key: 'Contact name',
+    lines: [d['contact-name']],
+    change: 'contact-details'
+  },
+  {
+    key: 'Contact role',
+    lines: [d['contact-job-title']],
+    change: 'contact-details'
+  },
+  {
+    key: 'Contact email',
+    lines: [d['contact-email']],
+    change: 'contact-details'
+  },
+  {
+    key: 'Contact telephone',
+    lines: [d['contact-telephone']],
+    change: 'contact-details'
+  }
+]
+
+const storeLocationRows = (d) => {
+  const locations = []
+  if (storedAt(d).includes(STORE_OWN)) {
+    if (storeSites(d).includes(SITE_MAIN)) {
+      locations.push({
+        lines: ['At the main business address'],
+        change: 'store-sites'
+      })
+    }
+    if (storeSites(d).includes(SITE_ANOTHER)) {
+      storageAddresses(d).forEach((address) =>
+        locations.push({
+          lines: addressLines(address),
+          change: 'storage-addresses'
+        })
+      )
+    }
+  }
+  if (storedAt(d).includes(STORE_THIRD_PARTY)) {
+    locations.push({
+      lines: [
+        d['store-3p-name'],
+        d['store-3p-business'],
+        d['store-3p-telephone'],
+        d['store-3p-email']
+      ].filter(filled),
+      change: 'store-3rd-party-contact'
+    })
+  }
+  return locations.map((location, index) => ({
+    key:
+      index === 0 ? 'PPP store location' : 'PPP store location ' + (index + 1),
+    ...location
+  }))
+}
+
+const subsectorRow = (d, sector, key, prefix, page) =>
+  hasSector(d, sector)
+    ? [
+        {
+          key,
+          lines: withOther(
+            d[prefix + '-subsector'],
+            d[prefix + '-subsector-other']
+          ),
+          change: page
+        }
+      ]
+    : []
+
+const usingRows = (d) => [
+  {
+    key: 'Who applies PPPs?',
+    lines: [d['who-applies']],
+    change: 'who-applies'
+  },
+  ...(d['who-applies'] === ANOTHER_ORG
+    ? [
+        {
+          key: 'Third party details',
+          lines: [
+            d['third-party-name'],
+            ...addressLines({
+              line1: d['third-party-line-1'],
+              line2: d['third-party-line-2'],
+              town: d['third-party-town'],
+              postcode: d['third-party-postcode'],
+              country: d['third-party-country']
+            })
+          ].filter(filled),
+          change: 'third-party'
+        }
+      ]
+    : []),
+  {
+    key: 'Main sectors of work',
+    lines: withOther(d.sector, d['sector-other']),
+    change: 'sector'
+  },
+  ...subsectorRow(
+    d,
+    'Agriculture',
+    'Agriculture sectors',
+    'agri',
+    'agri-subsectors'
+  ),
+  ...subsectorRow(
+    d,
+    'Amenity',
+    'Amenity sectors',
+    'amenity',
+    'amenity-subsectors'
+  ),
+  ...subsectorRow(
+    d,
+    'Horticulture',
+    'Horticulture sectors',
+    'horti',
+    'horti-subsectors'
+  ),
+  ...(hasSector(d, 'Agriculture') || hasSector(d, 'Horticulture')
+    ? [
+        {
+          key: 'Assurance schemes',
+          lines: withOther(
+            d['assurance-schemes'],
+            d['assurance-schemes-other']
+          ),
+          change: 'assurance-schemes'
+        }
+      ]
+    : []),
+  {
+    key: 'Where are PPPs stored?',
+    lines: storedAt(d),
+    change: 'store-applied'
+  },
+  ...storeLocationRows(d),
+  {
+    key: 'Quantity of PPPs or adjuvants used in the last year',
+    lines: filled(d.quantity) ? [d.quantity + ' Kgs/litres'] : [],
+    change: 'quantity'
+  }
+]
+
+const sellingRows = (d) => [
+  {
+    key: 'Total value of PPPs sold in a typical year',
+    lines: filled(d['sell-amateur-quantity'])
+      ? ['£' + d['sell-amateur-quantity']]
+      : [],
+    change: 'sell-amateur-quantity'
+  }
+]
+
+const registrationSummary = (d) => ({
+  businessRows: businessRows(d),
+  usingRows: activities(d).includes(USING) ? usingRows(d) : null,
+  sellingRows: activities(d).includes(SELLING) ? sellingRows(d) : null,
+  // With both activities, check answers and the PDF give each its own heading.
+  bothActivities:
+    activities(d).includes(USING) && activities(d).includes(SELLING)
+})
 
 // OS Places address lookup: search page → select page (more than one match) →
 // result page → `next`. "Use this address" copies the chosen address into the
-// same fields the manual page fills, so check-answers shows it either way.
-// The select and result pages share templates in includes/, given this config
-// as `lookup`.
+// same fields the manual page fills, or hands it to `save` if given. The select
+// and result pages share templates in includes/, given this config as `lookup`.
 const addressLookup = (router, lookup) => {
   const resultsKey = lookup.name + '-lookup-results'
   const selectedKey = lookup.name + '-lookup-selected'
@@ -208,44 +419,103 @@ const addressLookup = (router, lookup) => {
     const d = req.session.data
     const address = d[selectedKey]
     if (!address) return res.redirect(P + '/' + lookup.search)
-    const fields = lookup.addressFields
     const [line1, ...rest] = address.lines
-    d[fields.line1] = line1
-    d[fields.line2] = rest.join(', ')
-    d[fields.town] = address.town
-    d[fields.postcode] = address.postcode
-    d[fields.country] = address.country
+    const chosen = {
+      line1,
+      line2: rest.join(', '),
+      town: address.town,
+      postcode: address.postcode,
+      country: address.country
+    }
+    if (lookup.save) {
+      lookup.save(d, chosen)
+    } else {
+      const fields = lookup.addressFields
+      d[fields.line1] = chosen.line1
+      d[fields.line2] = chosen.line2
+      d[fields.town] = chosen.town
+      d[fields.postcode] = chosen.postcode
+      d[fields.country] = chosen.country
+    }
     for (const field of lookup.clear || []) delete d[field]
-    const back = consumeReturnTo(req)
-    if (back) return res.redirect(P + '/' + back)
-    res.redirect(P + '/' + lookup.next)
+    lookup.next(req, res)
   })
 }
 
-// Search and address field names for a lookup whose manual page uses
-// <prefix>-line-1, <prefix>-town etc, eg store-line-1.
-const prefixedFields = (prefix) => ({
-  searchFields: {
-    postcode: prefix + '-postcode',
-    building: prefix + '-building'
+// The fields every manual address page shares, as <prefix>-line-1 and so on.
+const manualAddressRules = (d, prefix) => [
+  {
+    field: prefix + '-line-1',
+    message: 'Enter address line 1',
+    valid: filled(d[prefix + '-line-1'])
   },
-  addressFields: {
-    line1: prefix + '-line-1',
-    line2: prefix + '-line-2',
-    town: prefix + '-town',
-    postcode: prefix + '-postcode',
-    country: prefix + '-country'
+  {
+    field: prefix + '-town',
+    message: 'Enter a town or city',
+    valid: filled(d[prefix + '-town'])
+  },
+  {
+    field: prefix + '-postcode',
+    message: 'Enter a postcode',
+    valid: filled(d[prefix + '-postcode'])
+  },
+  {
+    field: prefix + '-country',
+    message: 'Select a country',
+    valid: filled(d[prefix + '-country'])
   }
-})
+]
+
+const contactRules = (d, prefix) => [
+  {
+    field: prefix + '-name',
+    message: 'Enter a contact name',
+    valid: filled(d[prefix + '-name'])
+  },
+  {
+    field: prefix + '-telephone',
+    message: 'Enter a telephone number',
+    valid: filled(d[prefix + '-telephone'])
+  },
+  {
+    field: prefix + '-email',
+    message: 'Enter an email address',
+    valid: filled(d[prefix + '-email'])
+  }
+]
+
+const STORAGE_SEARCH_FIELDS = ['store-postcode', 'store-building']
+const STORAGE_MANUAL_FIELDS = [
+  'store-line-1',
+  'store-line-2',
+  'store-town',
+  'store-postcode',
+  'store-country'
+]
+
+// An address being changed from the summary page replaces that one;
+// otherwise the address is added to the list.
+const saveStorageAddress = (d, address) => {
+  const list = [...storageAddresses(d)]
+  const index = d['store-editing']
+  if (index !== undefined && Number(index) < list.length)
+    list[Number(index)] = address
+  else list.push(address)
+  d['storage-addresses'] = list
+  delete d['store-editing']
+}
 
 module.exports = (router) => {
-  // Bare version root → the version's start page. Without this, /v1-2 has no
-  // matching view and hits the Prototype Kit's (broken) built-in 404 page.
   router.get(P, (req, res) => res.redirect(P + '/start'))
 
-  // Capture a CYA "Change" link's ?returnTo=<cya> into session (on the GET of the
-  // page being edited), so that page's POST can return to the CYA. Scoped to this
-  // version's paths. See consumeReturnTo in journey-helpers.
+  // The new service name, for version 1.4 only.
+  router.use(P, (req, res, next) => {
+    res.locals.serviceName = SERVICE_NAME
+    next()
+  })
+
+  // A check answers Change link's ?returnTo=check-answers, kept until the page
+  // it opens is saved.
   router.use((req, res, next) => {
     if (req.path.startsWith(P) && req.query.returnTo && req.session.data) {
       req.session.data.returnTo = req.query.returnTo
@@ -253,82 +523,51 @@ module.exports = (router) => {
     next()
   })
 
-  // On an activity entry page that isn't the first in the chain, point Back at the
-  // previous selected activity's final page (entry pages otherwise default Back to
-  // contact-details). Templates use `entryBackLink or <default>`.
+  // Back links on the activity pages follow the route taken. Set for POSTs
+  // too, so a page shown again with errors keeps it.
   router.use((req, res, next) => {
-    if (req.method === 'GET' && req.path.startsWith(P + '/')) {
-      const act = entryActivity[req.path.slice(P.length + 1).replace(/\/$/, '')]
-      const acts = toArray(
-        req.session.data && req.session.data.activities
-      ).filter((a) => activityEntry[a])
-      const idx = act ? acts.indexOf(act) : -1
-      if (idx > 0) {
-        res.locals.entryBackLink =
-          P + '/' + lastPageOfActivity(acts[idx - 1], req.session.data)
-      }
+    const page = req.path.startsWith(P + '/')
+      ? req.path.slice(P.length + 1).replace(/\/$/, '')
+      : ''
+    if (req.session.data && answered[page]) {
+      res.locals.pathBackLink = P + '/' + activityBack(req.session.data, page)
     }
     next()
   })
 
-  // Where the quantity page leads — also used when the quantity page is skipped:
-  // amateur-only journeys go straight to check-answers, everyone else to sector.
-  const afterQuantity = (activities) =>
-    isAmateurOnly(activities) ? P + '/check-answers' : P + '/sector'
-
-  // --- Business activities (v1.3) ---
-  // Each selected activity has its own flow, traversed in the order selected,
-  // then a combined check-answers. The selection order is the checkbox DOM order
-  // (page top-to-bottom); if UR needs literal click order we'd capture it client
-  // side. Both the common route and the selling-only special case start at
-  // business name, so route there; the per-activity traversal after that is wired
-  // as the Figma 1.3 flows land.
-  router.post(P + '/activities', (req, res) => {
-    let activities = toArray(req.session.data.activities)
+  // --- Register or update ----------------------------------------------------
+  router.post(P + '/register-or-update', (req, res) => {
+    const answer = req.session.data['register-or-update']
     const v = validate([
       {
-        field: 'activities',
-        message: 'Select which activities your organisation carries out',
-        valid: activities.length > 0
+        field: 'register-or-update',
+        message: 'Select what you would like to do',
+        valid: filled(answer)
       }
     ])
-    if (!v.ok) return res.render(view('activities'), v)
+    if (!v.ok) return res.render(view('register-or-update'), v)
+    res.redirect(
+      P + '/' + (answer === 'update' ? 'update-not-built' : 'contact-details')
+    )
+  })
 
-    // Reorder to the click order captured client-side (activities-order); anything
-    // not in it (e.g. JS off) keeps DOM order at the end. This is the order the
-    // activity flows are then traversed in.
-    const clickOrder = (req.session.data['activities-order'] || '')
-      .split(',')
-      .filter(Boolean)
-    activities = [
-      ...clickOrder.filter((a) => activities.includes(a)),
-      ...activities.filter((a) => !clickOrder.includes(a))
-    ]
-    req.session.data.activities = activities
-    const back = consumeReturnTo(req)
-    // Changed from the CYA (returnTo set): walk the first newly-selected activity
-    // that has no answers yet, otherwise fall back to where we came from (the CYA).
-    if (back) {
-      return res.redirect(
-        P + '/' + nextUnanswered(activities, req.session.data)
-      )
-    }
+  // --- Contact details and email verification --------------------------------
+  router.post(P + '/contact-details', (req, res) => {
+    const v = validate(contactRules(req.session.data, 'contact'))
+    if (!v.ok) return res.render(view('contact-details'), v)
+    res.redirect(P + '/' + (consumeReturnTo(req) || 'check-your-email'))
+  })
+
+  // The verification link in the email. The user researcher sends the email,
+  // so the link may be opened in a browser with no answers yet.
+  router.get(P + '/confirm-email', (req, res) => {
+    const d = req.session.data
+    if (!filled(d['contact-email'])) Object.assign(d, SAMPLE_CONTACT)
+    d['email-verified'] = 'yes'
     res.redirect(P + '/business-name')
   })
 
-  router.post(P + '/main-customer', (req, res) => {
-    const v = validate([
-      {
-        field: 'main-customer',
-        message:
-          'Select whether your main customer is a professional or amateur user',
-        valid: filled(req.session.data['main-customer'])
-      }
-    ])
-    if (!v.ok) return res.render(view('main-customer'), v)
-    res.redirect(P + '/business-name')
-  })
-
+  // --- Business name and main address ----------------------------------------
   router.post(P + '/business-name', (req, res) => {
     const v = validate([
       {
@@ -338,20 +577,11 @@ module.exports = (router) => {
       }
     ])
     if (!v.ok) return res.render(view('business-name'), v)
-
-    const back = consumeReturnTo(req)
-    if (back) return res.redirect(P + '/' + back)
-
-    // Special case (Figma 1.3): if selling is the ONLY activity, skip the common
-    // address/contact pages and go straight to the Sell section. Everyone else
-    // follows the common route (address lookup next).
-    const activities = toArray(req.session.data.activities)
-    const sellingOnly = activities.length === 1 && activities[0] === 'selling'
-    // TODO: /sell = Sell-section entry, /main-address = common address lookup —
-    // both wired to their real 1.3 pages as those screens land.
-    if (sellingOnly) return res.redirect(P + '/sell')
-    res.redirect(P + '/address-lookup')
+    res.redirect(P + '/' + (consumeReturnTo(req) || 'address-lookup'))
   })
+
+  const afterMainAddress = (req, res) =>
+    res.redirect(P + '/' + (consumeReturnTo(req) || 'activities'))
 
   addressLookup(router, {
     name: 'main',
@@ -369,41 +599,17 @@ module.exports = (router) => {
       country: 'address-country'
     },
     clear: ['international-address'],
-    next: 'contact-details'
+    next: afterMainAddress
   })
 
   router.post(P + '/main-address', (req, res) => {
     const d = req.session.data
-    const v = validate([
-      {
-        field: 'address-line-1',
-        message: 'Enter address line 1',
-        valid: filled(d['address-line-1'])
-      },
-      {
-        field: 'address-town',
-        message: 'Enter a town or city',
-        valid: filled(d['address-town'])
-      },
-      {
-        field: 'address-postcode',
-        message: 'Enter a postcode',
-        valid: filled(d['address-postcode'])
-      },
-      {
-        field: 'address-country',
-        message: 'Select a country',
-        valid: filled(d['address-country'])
-      }
-    ])
+    const v = validate(manualAddressRules(d, 'address'))
     if (!v.ok) return res.render(view('main-address'), v)
-    const back = consumeReturnTo(req)
-    if (back) return res.redirect(P + '/' + back)
-    res.redirect(P + '/contact-details')
+    delete d['international-address']
+    afterMainAddress(req, res)
   })
 
-  // Main business address outside Great Britain (free-text) — reached from the
-  // "outside of Great Britain" link on the manual address page.
   router.post(P + '/address-international', (req, res) => {
     const v = validate([
       {
@@ -413,294 +619,124 @@ module.exports = (router) => {
       }
     ])
     if (!v.ok) return res.render(view('address-international'), v)
-    const back = consumeReturnTo(req)
-    if (back) return res.redirect(P + '/' + back)
-    res.redirect(P + '/contact-details')
+    afterMainAddress(req, res)
   })
 
-  router.post(P + '/contact-details', (req, res) => {
+  // --- Business activities ---------------------------------------------------
+  router.post(P + '/activities', (req, res) => {
     const d = req.session.data
     const v = validate([
       {
-        field: 'contact-name',
-        message: 'Enter a name',
-        valid: filled(d['contact-name'])
-      },
-      {
-        field: 'contact-telephone',
-        message: 'Enter a telephone number',
-        valid: filled(d['contact-telephone'])
-      },
-      {
-        field: 'contact-email',
-        message: 'Enter an email address',
-        valid: filled(d['contact-email'])
+        field: 'activities',
+        message: 'Select which activities your organisation carries out',
+        valid: activities(d).length > 0
       }
     ])
-    if (!v.ok) return res.render(view('contact-details'), v)
-    const back = consumeReturnTo(req)
-    if (back) return res.redirect(P + '/' + back)
-    // Hand off to the first not-yet-answered selected activity's sub-flow.
-    res.redirect(P + '/' + nextUnanswered(toArray(d.activities), d))
+    if (!v.ok) return res.render(view('activities'), v)
+    goNext(req, res, activityRoute(d))
   })
 
-  // --- Using PPPs journey (Figma 1.3) -------------------------------------
+  // --- Using PPPs ------------------------------------------------------------
+  // A page whose answer is required, then on through the rest of the route.
+  const activityPage = (page, rules) =>
+    router.post(P + '/' + page, (req, res) => {
+      const d = req.session.data
+      const v = validate(rules(d))
+      if (!v.ok) return res.render(view(page), v)
+      goNext(req, res, routeAfter(d, page))
+    })
 
-  // Who applies PPPs? Branch: we-apply → sector; another org → 3rd-party details.
-  router.post(P + '/who-applies', (req, res) => {
-    const answer = req.session.data['who-applies']
-    const v = validate([
-      {
-        field: 'who-applies',
-        message: 'Select who applies PPPs for your organisation',
-        valid: filled(answer)
-      }
-    ])
-    if (!v.ok) return res.render(view('who-applies'), v)
-    const back = consumeReturnTo(req)
-    if (back) return res.redirect(P + '/' + back)
-    if (answer === 'Another organisation applies PPPs on our behalf') {
-      return res.redirect(P + '/third-party')
+  activityPage('who-applies', (d) => [
+    {
+      field: 'who-applies',
+      message: 'Select who mainly applies PPPs for your organisation',
+      valid: filled(d['who-applies'])
     }
-    res.redirect(P + '/sector')
-  })
+  ])
 
-  // Third-party applicator details (reached when another org applies) → sector.
-  router.post(P + '/third-party', (req, res) => {
-    const d = req.session.data
-    const v = validate([
-      {
-        field: 'third-party-name',
-        message: 'Enter the business or company name',
-        valid: filled(d['third-party-name'])
-      },
-      {
-        field: 'third-party-line-1',
-        message: 'Enter address line 1',
-        valid: filled(d['third-party-line-1'])
-      },
-      {
-        field: 'third-party-town',
-        message: 'Enter a town or city',
-        valid: filled(d['third-party-town'])
-      },
-      {
-        field: 'third-party-postcode',
-        message: 'Enter a postcode',
-        valid: filled(d['third-party-postcode'])
-      },
-      {
-        field: 'third-party-country',
-        message: 'Select a country',
-        valid: filled(d['third-party-country'])
-      }
-    ])
-    if (!v.ok) return res.render(view('third-party'), v)
-    const back = consumeReturnTo(req)
-    if (back) return res.redirect(P + '/' + back)
-    res.redirect(P + '/sector')
-  })
+  activityPage('third-party', (d) => [
+    {
+      field: 'third-party-name',
+      message: 'Enter the business or company name',
+      valid: filled(d['third-party-name'])
+    },
+    ...manualAddressRules(d, 'third-party')
+  ])
 
-  // Which sector(s)? Assurance schemes only apply to agriculture / horticulture,
-  // so branch past them otherwise.
-  router.post(P + '/sector', (req, res) => {
-    const d = req.session.data
-    const sectors = toArray(d.sector)
-    const v = validate([
-      {
-        field: 'sector',
-        message: 'Select a sector, or describe your work in the ‘Other’ box',
-        valid: sectors.length > 0 || filled(d['sector-other'])
-      }
-    ])
-    if (!v.ok) return res.render(view('sector'), v)
-    const back = consumeReturnTo(req)
-    if (back) return res.redirect(P + '/' + back)
-    res.redirect(P + '/' + sectorChainNext(null, sectors))
-  })
-
-  // Agricultural subsectors (shown when Agriculture is a selected sector).
-  router.post(P + '/agri-subsectors', (req, res) => {
-    const d = req.session.data
-    const sub = toArray(d['agri-subsector'])
-    const v = validate([
-      {
-        field: 'agri-subsector',
-        message:
-          'Select an agricultural sector, or describe your work in the ‘Other’ box',
-        valid: sub.length > 0 || filled(d['agri-subsector-other'])
-      }
-    ])
-    if (!v.ok) return res.render(view('agri-subsectors'), v)
-    const back = consumeReturnTo(req)
-    if (back) return res.redirect(P + '/' + back)
-    res.redirect(
-      P + '/' + sectorChainNext('agri-subsectors', toArray(d.sector))
-    )
-  })
-
-  // Amenity subsectors (shown when Amenity is a selected sector).
-  router.post(P + '/amenity-subsectors', (req, res) => {
-    const d = req.session.data
-    const sub = toArray(d['amenity-subsector'])
-    const v = validate([
-      {
-        field: 'amenity-subsector',
-        message:
-          'Select an amenity sector, or describe your work in the ‘Other’ box',
-        valid: sub.length > 0 || filled(d['amenity-subsector-other'])
-      }
-    ])
-    if (!v.ok) return res.render(view('amenity-subsectors'), v)
-    const back = consumeReturnTo(req)
-    if (back) return res.redirect(P + '/' + back)
-    res.redirect(
-      P + '/' + sectorChainNext('amenity-subsectors', toArray(d.sector))
-    )
-  })
-
-  // Horticultural subsectors (shown when Horticulture is a selected sector).
-  router.post(P + '/horti-subsectors', (req, res) => {
-    const d = req.session.data
-    const sub = toArray(d['horti-subsector'])
-    const v = validate([
-      {
-        field: 'horti-subsector',
-        message:
-          'Select a horticultural sector, or describe your work in the ‘Other’ box',
-        valid: sub.length > 0 || filled(d['horti-subsector-other'])
-      }
-    ])
-    if (!v.ok) return res.render(view('horti-subsectors'), v)
-    const back = consumeReturnTo(req)
-    if (back) return res.redirect(P + '/' + back)
-    res.redirect(
-      P + '/' + sectorChainNext('horti-subsectors', toArray(d.sector))
-    )
-  })
-
-  router.post(P + '/activity-at-address', (req, res) => {
-    const v = validate([
-      {
-        field: 'address-activity',
-        message: 'Select what your business does at this address',
-        valid: toArray(req.session.data['address-activity']).length > 0
-      }
-    ])
-    if (!v.ok) return res.render(view('activity-at-address'), v)
-
-    // Only ask about quantity if they USE PPPs/adjuvants at this address. Storing
-    // or record-keeping alone doesn't need a quantity, so skip straight past it.
-    const addressActivity = toArray(req.session.data['address-activity'])
-    if (addressActivity.includes('use')) return res.redirect(P + '/quantity')
-    res.redirect(afterQuantity(toArray(req.session.data.activities)))
-  })
-
-  // Quantity band (Using journey) → the combined check-answers.
-  router.post(P + '/quantity', (req, res) => {
-    const v = validate([
-      {
-        field: 'quantity',
-        message: 'Select the quantity range that best matches your use',
-        valid: filled(req.session.data.quantity)
-      }
-    ])
-    if (!v.ok) return res.render(view('quantity'), v)
-    const back = consumeReturnTo(req)
-    if (back) return res.redirect(P + '/' + back)
-    res.redirect(
-      P +
-        '/' +
-        nextUnanswered(toArray(req.session.data.activities), req.session.data)
-    )
-  })
-
-  // Assurance schemes (optional, no validation) → next in the sector chain.
-  router.post(P + '/assurance-schemes', (req, res) => {
-    const back = consumeReturnTo(req)
-    if (back) return res.redirect(P + '/' + back)
-    res.redirect(
-      P +
-        '/' +
-        sectorChainNext('assurance-schemes', toArray(req.session.data.sector))
-    )
-  })
-
-  // Do you store products you apply? Branch: own sites → where; 3rd party →
-  // contact; don't store → quantity.
-  router.post(P + '/store-applied', (req, res) => {
-    const answer = req.session.data['store-applied']
-    const v = validate([
-      {
-        field: 'store-applied',
-        message: 'Select whether you store products you apply',
-        valid: filled(answer)
-      }
-    ])
-    if (!v.ok) return res.render(view('store-applied'), v)
-    const back = consumeReturnTo(req)
-    if (back) return res.redirect(P + '/' + back)
-    if (answer === 'Yes, at sites we own') {
-      return res.redirect(P + '/storing-where')
+  activityPage('sector', (d) => [
+    {
+      field: 'sector',
+      message: 'Select a sector, or describe your work in the ‘Other’ box',
+      valid: answered.sector(d)
     }
-    if (answer === 'Yes, a third party stores them for us') {
-      return res.redirect(P + '/store-3rd-party-contact')
-    }
-    res.redirect(P + '/quantity')
-  })
+  ])
 
-  // Third-party storage contact → quantity.
-  router.post(P + '/store-3rd-party-contact', (req, res) => {
+  activityPage('agri-subsectors', (d) => [
+    {
+      field: 'agri-subsector',
+      message:
+        'Select an agricultural sector, or describe your work in the ‘Other’ box',
+      valid: answered['agri-subsectors'](d)
+    }
+  ])
+
+  activityPage('amenity-subsectors', (d) => [
+    {
+      field: 'amenity-subsector',
+      message:
+        'Select an amenity sector, or describe your work in the ‘Other’ box',
+      valid: answered['amenity-subsectors'](d)
+    }
+  ])
+
+  activityPage('horti-subsectors', (d) => [
+    {
+      field: 'horti-subsector',
+      message:
+        'Select a horticultural sector, or describe your work in the ‘Other’ box',
+      valid: answered['horti-subsectors'](d)
+    }
+  ])
+
+  activityPage('assurance-schemes', () => [])
+
+  // --- Storage ---------------------------------------------------------------
+  activityPage('store-applied', (d) => [
+    {
+      field: 'store-applied',
+      message: 'Select where the products are stored',
+      valid: storedAt(d).length > 0
+    },
+    {
+      field: 'store-applied',
+      message:
+        'Select where the products are stored, or select ‘We do not store PPPs’',
+      valid: !(storedAt(d).includes(STORE_NONE) && storedAt(d).length > 1)
+    }
+  ])
+
+  router.post(P + '/store-sites', (req, res) => {
     const d = req.session.data
     const v = validate([
       {
-        field: 'store-3p-name',
-        message: 'Enter a contact name',
-        valid: filled(d['store-3p-name'])
-      },
-      {
-        field: 'store-3p-business',
-        message: 'Enter the business name',
-        valid: filled(d['store-3p-business'])
-      },
-      {
-        field: 'store-3p-telephone',
-        message: 'Enter a telephone number',
-        valid: filled(d['store-3p-telephone'])
-      },
-      {
-        field: 'store-3p-email',
-        message: 'Enter an email address',
-        valid: filled(d['store-3p-email'])
+        field: 'store-sites',
+        message: 'Select which of your sites store PPPs',
+        valid: storeSites(d).length > 0
       }
     ])
-    if (!v.ok) return res.render(view('store-3rd-party-contact'), v)
-    const back = consumeReturnTo(req)
-    if (back) return res.redirect(P + '/' + back)
-    res.redirect(P + '/quantity')
-  })
-
-  // Where do you store? Main address → quantity; different location → storage
-  // address lookup.
-  router.post(P + '/storing-where', (req, res) => {
-    const answer = req.session.data['storing-where']
-    const v = validate([
-      {
-        field: 'storing-where',
-        message: 'Select where you store products you apply',
-        valid: filled(answer)
-      }
-    ])
-    if (!v.ok) return res.render(view('storing-where'), v)
-    const back = consumeReturnTo(req)
-    if (back) return res.redirect(P + '/' + back)
-    if (answer === 'Main business address') {
-      return res.redirect(P + '/quantity')
+    if (!v.ok) return res.render(view('store-sites'), v)
+    // The first other address goes through the search; its summary comes after.
+    if (
+      storeSites(d).includes(SITE_ANOTHER) &&
+      storageAddresses(d).length === 0
+    ) {
+      return res.redirect(P + '/store-own-address-lookup')
     }
-    res.redirect(P + '/store-own-address-lookup')
+    goNext(req, res, routeAfter(d, 'store-sites'))
   })
 
-  // Storage location lookup (own, different location) → quantity.
+  const toStorageSummary = (req, res) => res.redirect(P + '/storage-addresses')
+
   addressLookup(router, {
     name: 'store',
     heading: 'What is the location where you store PPPs?',
@@ -708,697 +744,141 @@ module.exports = (router) => {
     select: 'store-own-address-select',
     result: 'store-own-address-result',
     manual: 'store-own-address-manual',
-    ...prefixedFields('store'),
-    next: 'quantity'
+    searchFields: { postcode: 'store-postcode', building: 'store-building' },
+    save: saveStorageAddress,
+    next: toStorageSummary
   })
 
-  // Storage location entered manually → quantity.
+  // Opened from a card's Change link (?edit=<index>): show that address. The
+  // kit has already copied the session into res.locals.data for the page, so
+  // both get the address.
+  router.get(P + '/store-own-address-manual', (req, res, next) => {
+    const address = storageAddresses(req.session.data)[Number(req.query.edit)]
+    if (req.query.edit !== undefined && address) {
+      const editing = {
+        'store-editing': Number(req.query.edit),
+        'store-line-1': address.line1,
+        'store-line-2': address.line2,
+        'store-town': address.town,
+        'store-postcode': address.postcode,
+        'store-country': address.country
+      }
+      Object.assign(req.session.data, editing)
+      Object.assign(res.locals.data, editing)
+    }
+    next()
+  })
+
   router.post(P + '/store-own-address-manual', (req, res) => {
     const d = req.session.data
-    const v = validate([
-      {
-        field: 'store-line-1',
-        message: 'Enter address line 1',
-        valid: filled(d['store-line-1'])
-      },
-      {
-        field: 'store-town',
-        message: 'Enter a town or city',
-        valid: filled(d['store-town'])
-      },
-      {
-        field: 'store-postcode',
-        message: 'Enter a postcode',
-        valid: filled(d['store-postcode'])
-      },
-      {
-        field: 'store-country',
-        message: 'Select a country',
-        valid: filled(d['store-country'])
-      }
-    ])
+    const v = validate(manualAddressRules(d, 'store'))
     if (!v.ok) return res.render(view('store-own-address-manual'), v)
-    const back = consumeReturnTo(req)
-    if (back) return res.redirect(P + '/' + back)
-    res.redirect(P + '/quantity')
+    saveStorageAddress(d, {
+      line1: d['store-line-1'],
+      line2: d['store-line-2'],
+      town: d['store-town'],
+      postcode: d['store-postcode'],
+      country: d['store-country']
+    })
+    STORAGE_MANUAL_FIELDS.forEach((field) => delete d[field])
+    toStorageSummary(req, res)
   })
 
-  // --- Manufacturing PPPs journey (Figma 1.3) -----------------------------
-  // products → quantity band → check-answers.
-
-  router.post(P + '/manufacture-products', (req, res) => {
-    const v = validate([
-      {
-        field: 'manufacture-products',
-        message: 'Select what products you manufacture',
-        valid: filled(req.session.data['manufacture-products'])
-      }
-    ])
-    if (!v.ok) return res.render(view('manufacture-products'), v)
-    const back = consumeReturnTo(req)
-    if (back) return res.redirect(P + '/' + back)
-    res.redirect(P + '/manufacture-quantity')
+  router.get(P + '/storage-addresses', (req, res, next) => {
+    if (storageAddresses(req.session.data).length === 0) {
+      return res.redirect(P + '/store-own-address-lookup')
+    }
+    next()
   })
 
-  router.post(P + '/manufacture-quantity', (req, res) => {
-    const v = validate([
-      {
-        field: 'manufacture-quantity',
-        message: 'Enter the estimated annual quantity',
-        valid: filled(req.session.data['manufacture-quantity'])
-      }
-    ])
-    if (!v.ok) return res.render(view('manufacture-quantity'), v)
-    const back = consumeReturnTo(req)
-    if (back) return res.redirect(P + '/' + back)
+  router.get(P + '/storage-addresses/remove/:index', (req, res) => {
+    const d = req.session.data
+    const list = [...storageAddresses(d)]
+    list.splice(Number(req.params.index), 1)
+    d['storage-addresses'] = list
     res.redirect(
-      P +
-        '/' +
-        nextUnanswered(toArray(req.session.data.activities), req.session.data)
+      P + '/' + (list.length > 0 ? 'storage-addresses' : 'store-sites')
     )
   })
 
-  // --- Selling PPPs journey (Figma 1.3) -----------------------------------
-  // PPP use type splits into a professional branch (products → quantity)
-  // and an amateur branch (quantity → …). Selling-only additionally collects the
-  // head-office address and contact within this flow. (Downstream pages are wired
-  // as the remaining Sell screens land.)
-  router.post(P + '/sell', (req, res) => {
-    const answer = req.session.data['sell-use-type']
-    const v = validate([
-      {
-        field: 'sell-use-type',
-        message:
-          'Select whether the PPPs you sell are mostly professional or amateur use',
-        valid: filled(answer)
-      }
-    ])
-    if (!v.ok) return res.render(view('sell'), v)
-    const back = consumeReturnTo(req)
-    if (back) return res.redirect(P + '/' + back)
-    if (answer === 'Mostly amateur use') {
-      return res.redirect(P + '/sell-amateur-quantity')
-    }
-    res.redirect(P + '/sell-pro-products')
-  })
-
-  router.post(P + '/sell-pro-products', (req, res) => {
-    const v = validate([
-      {
-        field: 'sell-pro-products',
-        message: 'Select what products you sell',
-        valid: filled(req.session.data['sell-pro-products'])
-      }
-    ])
-    if (!v.ok) return res.render(view('sell-pro-products'), v)
-    const back = consumeReturnTo(req)
-    if (back) return res.redirect(P + '/' + back)
-    res.redirect(P + '/sell-pro-quantity')
-  })
-
-  router.post(P + '/sell-amateur-quantity', (req, res) => {
-    const v = validate([
-      {
-        field: 'sell-amateur-quantity',
-        message: 'Enter the estimated annual quantity',
-        valid: filled(req.session.data['sell-amateur-quantity'])
-      }
-    ])
-    if (!v.ok) return res.render(view('sell-amateur-quantity'), v)
-    const back = consumeReturnTo(req)
-    if (back) return res.redirect(P + '/' + back)
-    // Selling-only skipped the common address/contact pages, so collect the head
-    // office address next; otherwise those were already captured → next activity.
-    if (isSellingOnly(toArray(req.session.data.activities))) {
-      return res.redirect(P + '/sell-amateur-head-office-address-lookup')
-    }
-    res.redirect(
-      P +
-        '/' +
-        nextUnanswered(toArray(req.session.data.activities), req.session.data)
-    )
-  })
-
-  router.post(P + '/sell-pro-quantity', (req, res) => {
-    const v = validate([
-      {
-        field: 'sell-pro-quantity',
-        message: 'Enter the estimated annual quantity',
-        valid: filled(req.session.data['sell-pro-quantity'])
-      }
-    ])
-    if (!v.ok) return res.render(view('sell-pro-quantity'), v)
-    const back = consumeReturnTo(req)
-    if (back) return res.redirect(P + '/' + back)
-    // Selling-only collects the head office address + contact within this flow.
-    if (isSellingOnly(toArray(req.session.data.activities))) {
-      return res.redirect(P + '/sell-amateur-head-office-address-lookup')
-    }
-    res.redirect(
-      P +
-        '/' +
-        nextUnanswered(toArray(req.session.data.activities), req.session.data)
-    )
-  })
-
-  // Head office address (used by both Sell branches when selling-only). "Find an
-  // address" → postcode search; "enter manually" links to the manual page.
-  router.post(P + '/sell-amateur-head-office-address-lookup', (req, res) =>
-    res.redirect(P + '/sell-amateur-head-office-lookup-search')
-  )
-
-  addressLookup(router, {
-    name: 'sell-ho',
-    heading: 'What is the address for your head office?',
-    search: 'sell-amateur-head-office-lookup-search',
-    select: 'sell-amateur-head-office-address-lookup-select',
-    result: 'sell-amateur-head-office-address-lookup-result',
-    manual: 'sell-amateur-head-office-manual-address',
-    ...prefixedFields('sell-ho'),
-    next: 'sell-amateur-contact-details'
-  })
-
-  router.post(P + '/sell-amateur-head-office-manual-address', (req, res) => {
+  router.post(P + '/storage-addresses', (req, res) => {
     const d = req.session.data
     const v = validate([
       {
-        field: 'sell-ho-line-1',
-        message: 'Enter address line 1',
-        valid: filled(d['sell-ho-line-1'])
-      },
-      {
-        field: 'sell-ho-town',
-        message: 'Enter a town or city',
-        valid: filled(d['sell-ho-town'])
-      },
-      {
-        field: 'sell-ho-postcode',
-        message: 'Enter a postcode',
-        valid: filled(d['sell-ho-postcode'])
-      },
-      {
-        field: 'sell-ho-country',
-        message: 'Select a country',
-        valid: filled(d['sell-ho-country'])
+        field: 'add-another-address',
+        message: 'Select yes if you want to add another address',
+        valid: filled(d['add-another-address'])
       }
     ])
-    if (!v.ok)
-      return res.render(view('sell-amateur-head-office-manual-address'), v)
-    const back = consumeReturnTo(req)
-    if (back) return res.redirect(P + '/' + back)
-    res.redirect(P + '/sell-amateur-contact-details')
-  })
-
-  router.post(P + '/sell-amateur-contact-details', (req, res) => {
-    const d = req.session.data
-    const v = validate([
-      {
-        field: 'sell-contact-name',
-        message: 'Enter a name',
-        valid: filled(d['sell-contact-name'])
-      },
-      {
-        field: 'sell-contact-telephone',
-        message: 'Enter a telephone number',
-        valid: filled(d['sell-contact-telephone'])
-      },
-      {
-        field: 'sell-contact-email',
-        message: 'Enter an email address',
-        valid: filled(d['sell-contact-email'])
-      }
-    ])
-    if (!v.ok) return res.render(view('sell-amateur-contact-details'), v)
-    const back = consumeReturnTo(req)
-    if (back) return res.redirect(P + '/' + back)
-    res.redirect(
-      P +
-        '/' +
-        nextUnanswered(toArray(req.session.data.activities), req.session.data)
-    )
-  })
-
-  // --- Only storing PPPs journey (Figma 1.3) ------------------------------
-  // products → free-text annual volume → check-answers.
-  // (storing-only is exclusive but still uses the common address/contact route.)
-
-  router.post(P + '/store-only-products', (req, res) => {
-    const v = validate([
-      {
-        field: 'store-only-products',
-        message: 'Select what products you store',
-        valid: filled(req.session.data['store-only-products'])
-      }
-    ])
-    if (!v.ok) return res.render(view('store-only-products'), v)
-    const back = consumeReturnTo(req)
-    if (back) return res.redirect(P + '/' + back)
-    res.redirect(P + '/store-only-quantity')
-  })
-
-  router.post(P + '/store-only-quantity', (req, res) => {
-    const v = validate([
-      {
-        field: 'store-only-quantity',
-        message: 'Enter the estimated annual quantity',
-        valid: filled(req.session.data['store-only-quantity'])
-      }
-    ])
-    if (!v.ok) return res.render(view('store-only-quantity'), v)
-    const back = consumeReturnTo(req)
-    if (back) return res.redirect(P + '/' + back)
-    res.redirect(
-      P +
-        '/' +
-        nextUnanswered(toArray(req.session.data.activities), req.session.data)
-    )
-  })
-
-  // --- Distributing PPPs journey (Figma 1.3) ------------------------------
-  // products → free-text annual volume → check-answers.
-
-  router.post(P + '/distribute-products', (req, res) => {
-    const v = validate([
-      {
-        field: 'distribute-products',
-        message: 'Select what products you distribute',
-        valid: filled(req.session.data['distribute-products'])
-      }
-    ])
-    if (!v.ok) return res.render(view('distribute-products'), v)
-    const back = consumeReturnTo(req)
-    if (back) return res.redirect(P + '/' + back)
-    res.redirect(P + '/distribute-quantity')
-  })
-
-  router.post(P + '/distribute-quantity', (req, res) => {
-    const v = validate([
-      {
-        field: 'distribute-quantity',
-        message: 'Enter the estimated annual quantity',
-        valid: filled(req.session.data['distribute-quantity'])
-      }
-    ])
-    if (!v.ok) return res.render(view('distribute-quantity'), v)
-    const back = consumeReturnTo(req)
-    if (back) return res.redirect(P + '/' + back)
-    res.redirect(
-      P +
-        '/' +
-        nextUnanswered(toArray(req.session.data.activities), req.session.data)
-    )
-  })
-
-  // --- Processing PPPs journey (Figma 1.3) --------------------------------
-  // products → free-text annual volume → check-answers.
-
-  router.post(P + '/process-products', (req, res) => {
-    const v = validate([
-      {
-        field: 'process-products',
-        message: 'Select what products you process',
-        valid: filled(req.session.data['process-products'])
-      }
-    ])
-    if (!v.ok) return res.render(view('process-products'), v)
-    const back = consumeReturnTo(req)
-    if (back) return res.redirect(P + '/' + back)
-    res.redirect(P + '/process-quantity')
-  })
-
-  router.post(P + '/process-quantity', (req, res) => {
-    const v = validate([
-      {
-        field: 'process-quantity',
-        message: 'Enter the estimated annual quantity',
-        valid: filled(req.session.data['process-quantity'])
-      }
-    ])
-    if (!v.ok) return res.render(view('process-quantity'), v)
-    const back = consumeReturnTo(req)
-    if (back) return res.redirect(P + '/' + back)
-    res.redirect(
-      P +
-        '/' +
-        nextUnanswered(toArray(req.session.data.activities), req.session.data)
-    )
-  })
-
-  // --- Importing PPPs journey (Figma 1.3) ---------------------------------
-  // products → do you store? → (storage sub-flow) → quantity → check-answers.
-
-  router.post(P + '/import-products', (req, res) => {
-    const v = validate([
-      {
-        field: 'import-products',
-        message: 'Select what products you import',
-        valid: filled(req.session.data['import-products'])
-      }
-    ])
-    if (!v.ok) return res.render(view('import-products'), v)
-    const back = consumeReturnTo(req)
-    if (back) return res.redirect(P + '/' + back)
-    res.redirect(P + '/import-storing')
-  })
-
-  // Do you store products you import? Own sites → where; 3rd party → contact;
-  // don't store → quantity.
-  router.post(P + '/import-storing', (req, res) => {
-    const answer = req.session.data['import-storing']
-    const v = validate([
-      {
-        field: 'import-storing',
-        message: 'Select whether you store products you import',
-        valid: filled(answer)
-      }
-    ])
-    if (!v.ok) return res.render(view('import-storing'), v)
-    const back = consumeReturnTo(req)
-    if (back) return res.redirect(P + '/' + back)
-    if (answer === 'Yes, at sites we own') {
-      return res.redirect(P + '/import-storing-where')
+    if (!v.ok) return res.render(view('storage-addresses'), v)
+    const addAnother = d['add-another-address'] === 'Yes'
+    delete d['add-another-address']
+    if (addAnother) {
+      ;[...STORAGE_SEARCH_FIELDS, ...STORAGE_MANUAL_FIELDS].forEach(
+        (field) => delete d[field]
+      )
+      delete d['store-editing']
+      return res.redirect(P + '/store-own-address-lookup')
     }
-    if (answer === 'Yes, a third party stores them on our behalf') {
-      return res.redirect(P + '/import-store-3rd-party-contact')
+    goNext(req, res, routeAfter(d, 'storage-addresses'))
+  })
+
+  activityPage('store-3rd-party-contact', (d) => [
+    {
+      field: 'store-3p-business',
+      message: 'Enter the business name',
+      valid: filled(d['store-3p-business'])
+    },
+    ...contactRules(d, 'store-3p')
+  ])
+
+  activityPage('quantity', (d) => [
+    {
+      field: 'quantity',
+      message:
+        'Select the quantity of PPPs or adjuvants you use in a typical year',
+      valid: filled(d.quantity)
     }
-    res.redirect(P + '/import-quantity')
-  })
+  ])
 
-  // Third-party storage contact (import) → quantity.
-  router.post(P + '/import-store-3rd-party-contact', (req, res) => {
-    const d = req.session.data
-    const v = validate([
-      {
-        field: 'import-store-3p-name',
-        message: 'Enter a contact name',
-        valid: filled(d['import-store-3p-name'])
-      },
-      {
-        field: 'import-store-3p-telephone',
-        message: 'Enter a telephone number',
-        valid: filled(d['import-store-3p-telephone'])
-      },
-      {
-        field: 'import-store-3p-email',
-        message: 'Enter an email address',
-        valid: filled(d['import-store-3p-email'])
-      }
-    ])
-    if (!v.ok) return res.render(view('import-store-3rd-party-contact'), v)
-    const back = consumeReturnTo(req)
-    if (back) return res.redirect(P + '/' + back)
-    res.redirect(P + '/import-quantity')
-  })
-
-  // Where do you store? Main address → quantity; other locations → storage
-  // address search.
-  router.post(P + '/import-storing-where', (req, res) => {
-    const answer = req.session.data['import-storing-where']
-    const v = validate([
-      {
-        field: 'import-storing-where',
-        message: 'Select where you store products you import',
-        valid: filled(answer)
-      }
-    ])
-    if (!v.ok) return res.render(view('import-storing-where'), v)
-    const back = consumeReturnTo(req)
-    if (back) return res.redirect(P + '/' + back)
-    if (answer === 'Main business address') {
-      return res.redirect(P + '/import-quantity')
+  // --- Selling amateur PPPs --------------------------------------------------
+  activityPage('sell-amateur-quantity', (d) => [
+    {
+      field: 'sell-amateur-quantity',
+      message: 'Enter the estimated sales value',
+      valid: filled(d['sell-amateur-quantity'])
     }
-    res.redirect(P + '/import-store-own-address-search')
-  })
+  ])
 
-  // Storage location postcode search → import quantity.
-  addressLookup(router, {
-    name: 'import-store',
-    heading: 'What is the location where you store PPPs?',
-    search: 'import-store-own-address-search',
-    select: 'import-store-own-address-select',
-    result: 'import-store-own-address-result',
-    manual: 'import-store-own-address-manual',
-    ...prefixedFields('import-store'),
-    next: 'import-quantity'
-  })
-
-  // Storage location entered manually → quantity.
-  router.post(P + '/import-store-own-address-manual', (req, res) => {
-    const d = req.session.data
-    const v = validate([
-      {
-        field: 'import-store-line-1',
-        message: 'Enter address line 1',
-        valid: filled(d['import-store-line-1'])
-      },
-      {
-        field: 'import-store-town',
-        message: 'Enter a town or city',
-        valid: filled(d['import-store-town'])
-      },
-      {
-        field: 'import-store-postcode',
-        message: 'Enter a postcode',
-        valid: filled(d['import-store-postcode'])
-      },
-      {
-        field: 'import-store-country',
-        message: 'Select a country',
-        valid: filled(d['import-store-country'])
-      }
-    ])
-    if (!v.ok) return res.render(view('import-store-own-address-manual'), v)
-    const back = consumeReturnTo(req)
-    if (back) return res.redirect(P + '/' + back)
-    res.redirect(P + '/import-quantity')
-  })
-
-  // Quantity (import, free-text) → the combined check-answers.
-  router.post(P + '/import-quantity', (req, res) => {
-    const v = validate([
-      {
-        field: 'import-quantity',
-        message: 'Enter the estimated annual quantity',
-        valid: filled(req.session.data['import-quantity'])
-      }
-    ])
-    if (!v.ok) return res.render(view('import-quantity'), v)
-    const back = consumeReturnTo(req)
-    if (back) return res.redirect(P + '/' + back)
-    res.redirect(
-      P +
-        '/' +
-        nextUnanswered(toArray(req.session.data.activities), req.session.data)
-    )
-  })
-
-  // --- Additional addresses branch ---
-  router.post(P + '/additional-addresses-question', (req, res) => {
-    const v = validate([
-      {
-        field: 'add-additional',
-        message:
-          'Select whether you need to add any additional business addresses',
-        valid: filled(req.session.data['add-additional'])
-      }
-    ])
-    if (!v.ok) return res.render(view('additional-addresses-question'), v)
-
-    if (req.session.data['add-additional'] === 'yes')
-      return res.redirect(P + '/additional-address')
-    res.redirect(P + '/check-answers')
-  })
-
-  router.post(P + '/additional-address', (req, res) => {
-    const d = req.session.data
-    const v = validate([
-      {
-        field: 'add-line-1',
-        message: 'Enter address line 1',
-        valid: filled(d['add-line-1'])
-      },
-      {
-        field: 'add-town',
-        message: 'Enter a town or city',
-        valid: filled(d['add-town'])
-      },
-      {
-        field: 'add-country',
-        message: 'Select a country',
-        valid: filled(d['add-country'])
-      }
-    ])
-    if (!v.ok) return res.render(view('additional-address'), v)
-    res.redirect(P + '/additional-address-contact')
-  })
-
-  router.post(P + '/additional-address-contact', (req, res) => {
-    const d = req.session.data
-    const v = validate([
-      {
-        field: 'add-contact-name',
-        message: 'Enter a name',
-        valid: filled(d['add-contact-name'])
-      },
-      {
-        field: 'add-contact-telephone',
-        message: 'Enter a telephone number',
-        valid: filled(d['add-contact-telephone'])
-      },
-      {
-        field: 'add-contact-email',
-        message: 'Enter an email address',
-        valid: filled(d['add-contact-email'])
-      }
-    ])
-    if (!v.ok) return res.render(view('additional-address-contact'), v)
-    res.redirect(P + '/additional-address-activity')
-  })
-
-  // Assemble the temporary "add-*" fields into a saved additional address, then reset them
-  router.post(P + '/additional-address-activity', (req, res) => {
-    const d = req.session.data
-    const v = validate([
-      {
-        field: 'add-activity',
-        message: 'Select what your business does at this address',
-        valid: toArray(d['add-activity']).length > 0
-      }
-    ])
-    if (!v.ok) return res.render(view('additional-address-activity'), v)
-
-    const address = {
-      businessName: d['business-name'],
-      line1: d['add-line-1'],
-      line2: d['add-line-2'],
-      town: d['add-town'],
-      postcode: d['add-postcode'],
-      country: d['add-country'],
-      contactName: d['add-contact-name'],
-      contactTelephone: d['add-contact-telephone'],
-      contactEmail: d['add-contact-email'],
-      activity: toArray(d['add-activity'])
-    }
-
-    d.additionalAddresses = d.additionalAddresses || []
-    d.additionalAddresses.push(address)
-
-    clearAdditionalAddressFields(d)
-    res.redirect(P + '/additional-addresses')
-  })
-
-  // Summary page: add another, or finish
-  router.post(P + '/additional-addresses', (req, res) => {
-    const v = validate([
-      {
-        field: 'add-another',
-        message: 'Select whether you want to add another address',
-        valid: filled(req.session.data['add-another'])
-      }
-    ])
-    if (!v.ok) return res.render(view('additional-addresses'), v)
-
-    if (req.session.data['add-another'] === 'yes')
-      return res.redirect(P + '/additional-address')
-    res.redirect(P + '/check-answers')
-  })
-
-  // Remove an additional address by index, then return to the summary
-  router.get(P + '/additional-addresses/remove/:index', (req, res) => {
-    const d = req.session.data
-    const index = Number(req.params.index)
-
-    if (
-      Array.isArray(d.additionalAddresses) &&
-      index >= 0 &&
-      index < d.additionalAddresses.length
-    ) {
-      d.additionalAddresses.splice(index, 1)
-    }
-
-    if (!d.additionalAddresses || d.additionalAddresses.length === 0) {
-      return res.redirect(P + '/additional-addresses-question')
-    }
-    res.redirect(P + '/additional-addresses')
-  })
-
-  // Check-answers is rendered here (not auto-rendered) so all option-string
-  // comparisons live in JS. The formatter reflows nunjucks {% set %} blocks like
-  // prose and can insert newlines inside string literals, which silently breaks
-  // in-template string comparisons; computing the flags here avoids that.
-  const STORING_WHERE_LABEL = {
-    'Main business address': 'Only at the main business address',
-    'A different location to the main business address':
-      'At the main business address and other locations'
-  }
+  // --- Check answers, confirmation and the PDF -------------------------------
   router.get(P + '/check-answers', (req, res) => {
-    const d = req.session.data || {}
-    const sectors = toArray(d.sector)
-    const acts = toArray(d.activities)
-    const sellPro = d['sell-use-type'] === 'Mostly professional use'
-    const sellSellingOnly = isSellingOnly(acts)
-    // Back link → the final page of the LAST selected activity's flow.
-    const lastPage = {
-      using: '/quantity',
-      manufacturing: '/manufacture-quantity',
-      importing: '/import-quantity',
-      processing: '/process-quantity',
-      distributing: '/distribute-quantity',
-      'storing-only': '/store-only-quantity',
-      selling: sellSellingOnly
-        ? '/sell-amateur-contact-details'
-        : sellPro
-          ? '/sell-pro-quantity'
-          : '/sell-amateur-quantity'
-    }
-    const flowActs = acts.filter((a) => activityEntry[a])
-    const lastAct = flowActs[flowActs.length - 1]
+    const d = req.session.data
+    const route = activityRoute(d)
     res.render(view('check-answers'), {
-      cyaBack: P + (lastPage[lastAct] || '/quantity'),
-      // Resolved "where do you store" label lines (kept out of the template so
-      // the formatter can't split the multi-word map keys used for lookup)
-      usingStoringWhereText:
-        STORING_WHERE_LABEL[d['storing-where']] || d['storing-where'] || '',
-      importStoringWhereText:
-        STORING_WHERE_LABEL[d['import-storing-where']] ||
-        d['import-storing-where'] ||
-        '',
-      // Using PPPs section
-      usingAnotherOrg:
-        d['who-applies'] === 'Another organisation applies PPPs on our behalf',
-      usingAssurance:
-        sectors.includes('Agriculture') || sectors.includes('Horticulture'),
-      usingStoreOwnSites: d['store-applied'] === 'Yes, at sites we own',
-      usingStoreThirdParty:
-        d['store-applied'] === 'Yes, a third party stores them for us',
-      usingStoreOwnDifferent:
-        d['store-applied'] === 'Yes, at sites we own' &&
-        d['storing-where'] ===
-          'A different location to the main business address',
-      // Importing PPPs section
-      importStoreOwnSites: d['import-storing'] === 'Yes, at sites we own',
-      importStoreThirdParty:
-        d['import-storing'] === 'Yes, a third party stores them on our behalf',
-      importStoreOwnDifferent:
-        d['import-storing'] === 'Yes, at sites we own' &&
-        d['import-storing-where'] ===
-          'A different location to the main business address',
-      // Selling PPPs section. Selling-only collected the head-office address +
-      // contact in the Sell flow, so business-details shows those, not the common
-      // ones.
-      sellPro: sellPro,
-      sellSellingOnly: sellSellingOnly
+      ...registrationSummary(d),
+      cyaBack: P + '/' + (route[route.length - 1] || 'activities')
     })
   })
 
-  // --- Finish ---
   router.post(P + '/check-answers', (req, res) =>
     res.redirect(P + '/confirmation')
   )
 
-  // Confirmation — one "Registration complete" panel with a single reference
-  // number covering the whole registration, however many activities were selected.
-  router.get(P + '/confirmation', (req, res) => {
+  router.get(P + '/confirmation', (req, res) =>
     res.render(view('confirmation'), { registrationRef: REGISTRATION_REF })
+  )
+
+  router.get(P + '/registration.pdf', (req, res) => {
+    res.setHeader('Content-Type', 'application/pdf')
+    res.setHeader(
+      'Content-Disposition',
+      'attachment; filename="registration-' + REGISTRATION_REF + '.pdf"'
+    )
+    registrationPdf(res, {
+      serviceName: SERVICE_NAME,
+      reference: REGISTRATION_REF,
+      registeredOn: new Date(),
+      ...registrationSummary(req.session.data)
+    })
   })
 }

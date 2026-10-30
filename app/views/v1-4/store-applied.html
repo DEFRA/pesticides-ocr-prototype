@@ -1,25 +1,30 @@
-{% extends "layouts/main.html" %} {% set basePath = "/v1-4" %} {% from
-"govuk/components/radios/macro.njk" import govukRadios %} {% from
-"govuk/components/button/macro.njk" import govukButton %} {% from
-"govuk/components/error-summary/macro.njk" import govukErrorSummary %} {% set
-pageName = "Do you store products you apply?" %} {% set backLink = basePath +
-"/sector" %} {% block content %}
+{% extends "layouts/main.html" %}
+{% set basePath = "/v1-4" %}
+{% from "govuk/components/checkboxes/macro.njk" import govukCheckboxes %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
+{% set pageName = "Where are the products stored?" %}
+{% set backLink = pathBackLink or (basePath + "/sector") %}
+
+{% block content %}
 <div class="govuk-grid-row">
   <div class="govuk-grid-column-two-thirds">
-    {% if errorList %}{{ govukErrorSummary({ titleText: "There is a problem",
-    errorList: errorList }) }}{% endif %}
-
+    {% if errorList %}{{ govukErrorSummary({ titleText: "There is a problem", errorList: errorList }) }}{% endif %}
     <form method="post" action="{{ basePath }}/store-applied" novalidate>
-      {{ govukRadios({ name: "store-applied", errorMessage: { text:
-      errors["store-applied"] } if errors["store-applied"], fieldset: { legend:
-      { text: "Do you store products you apply?", isPageHeading: true, classes:
-      "govuk-fieldset__legend--l" } }, hint: { text: "Select an option" },
-      items: [ { value: "Yes, at sites we own", text: "Yes, at sites we own",
-      checked: checked("store-applied", "Yes, at sites we own") }, { value:
-      "Yes, a third party stores them for us", text: "Yes, a third party stores
-      them for us", checked: checked("store-applied", "Yes, a third party stores them for us") }, { value: "No, we don't store PPPs", text: "No, we don't
-      store PPPs", checked: checked("store-applied", "No, we don't store PPPs")
-      } ] }) }} {{ govukButton({ text: "Continue" }) }}
+      {# Unticking every box sends nothing, so this clears the answer. #}
+      <input type="hidden" name="store-applied" value="_unchecked">
+      {{ govukCheckboxes({
+        name: "store-applied",
+        fieldset: { legend: { text: "Where are the products stored?", isPageHeading: true, classes: "govuk-fieldset__legend--l" } },
+        hint: { html: '<p class="govuk-body">Only include sites where more than 50 litres or 50 kilograms of PPPs are stored at any one time.</p>Select all that apply' },
+        errorMessage: { text: errors["store-applied"] } if errors["store-applied"],
+        items: [
+          { value: "At sites we own", text: "At sites we own", checked: checked("store-applied", "At sites we own") },
+          { value: "By a third party on our behalf", text: "By a third party on our behalf", checked: checked("store-applied", "By a third party on our behalf") },
+          { value: "We do not store PPPs", text: "We do not store PPPs", behaviour: "exclusive", checked: checked("store-applied", "We do not store PPPs") }
+        ]
+      }) }}
+      {{ govukButton({ text: "Continue" }) }}
     </form>
   </div>
 </div>

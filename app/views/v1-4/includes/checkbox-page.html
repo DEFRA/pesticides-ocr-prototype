@@ -1,0 +1,28 @@
+{# A "Select all that apply" page with an Other box: set name, heading, hint,
+items (value, text, hint) and otherHint before including it. #}
+{% from "govuk/components/checkboxes/macro.njk" import govukCheckboxes %}
+{% from "govuk/components/textarea/macro.njk" import govukTextarea %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+    {% if errorList %}{{ govukErrorSummary({ titleText: "There is a problem", errorList: errorList }) }}{% endif %}
+    {% set checkboxItems = [] %}
+    {% for item in items %}
+      {% set checkboxItems = (checkboxItems.push({ value: item.value, text: item.value, hint: { text: item.hint } if item.hint, checked: checked(name, item.value) }), checkboxItems) %}
+    {% endfor %}
+    <form method="post" action="{{ basePath }}/{{ page }}" novalidate>
+      {# Unticking every box sends nothing, so this clears the answer. #}
+      <input type="hidden" name="{{ name }}" value="_unchecked">
+      {{ govukCheckboxes({
+        name: name,
+        fieldset: { legend: { text: heading, isPageHeading: true, classes: "govuk-fieldset__legend--l" } },
+        hint: { text: hint },
+        errorMessage: { text: errors[name] } if errors[name],
+        items: checkboxItems
+      }) }}
+      {{ govukTextarea({ label: { text: "Other", classes: "govuk-label--s" }, hint: { text: otherHint }, id: name + "-other", name: name + "-other", rows: 3, value: data[name + "-other"] }) }}
+      {{ govukButton({ text: "Continue" }) }}
+    </form>
+  </div>
+</div>
