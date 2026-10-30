@@ -14,6 +14,7 @@ const {
   addressFrom,
   setAddress,
   addressFieldNames,
+  mainAddressLines,
   activityRoute,
   answered,
   registrationSummary
@@ -341,6 +342,8 @@ module.exports = (router) => {
       }
     ])
     if (!v.ok) return res.render(view('address-international'), v)
+    for (const field of addressFieldNames('address'))
+      delete req.session.data[field]
     afterMainAddress(req, res)
   })
 
@@ -413,6 +416,12 @@ module.exports = (router) => {
       valid: !(storedAt(d).includes(STORE_NONE) && storedAt(d).length > 1)
     }
   ])
+
+  // The first option names the main address, GB or international.
+  router.use(P + '/store-sites', (req, res, next) => {
+    res.locals.mainAddressLine = mainAddressLines(req.session.data)[0]
+    next()
+  })
 
   router.post(P + '/store-sites', (req, res) => {
     const d = req.session.data
@@ -562,9 +571,12 @@ module.exports = (router) => {
     })
   })
 
-  router.post(P + '/check-answers', (req, res) =>
+  // The registration date is when it was submitted, however often it's
+  // downloaded.
+  router.post(P + '/check-answers', (req, res) => {
+    req.session.data['registered-on'] = new Date().toISOString()
     res.redirect(P + '/confirmation')
-  )
+  })
 
   router.get(P + '/confirmation', (req, res) =>
     res.render(view('confirmation'), { registrationRef: REGISTRATION_REF })
@@ -575,7 +587,7 @@ module.exports = (router) => {
       const pdf = await registrationPdf({
         serviceName: SERVICE_NAME,
         reference: REGISTRATION_REF,
-        registeredOn: new Date(),
+        registeredOn: new Date(req.session.data['registered-on'] || Date.now()),
         ...registrationSummary(req.session.data)
       })
       res

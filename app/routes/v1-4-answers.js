@@ -109,6 +109,13 @@ const activityRoute = (d) => [
   ...(activities(d).includes(SELLING) ? ['sell-amateur-quantity'] : [])
 ]
 
+const allFilled = (d, fields) => fields.every((field) => filled(d[field]))
+const addressComplete = (d, prefix) =>
+  allFilled(
+    d,
+    addressFieldNames(prefix).filter((f) => !f.endsWith('-line-2'))
+  )
+
 const ticksOrOther = (d, field) =>
   toArray(d[field]).length > 0 || filled(d[field + '-other'])
 
@@ -116,7 +123,8 @@ const ticksOrOther = (d, field) =>
 // the pages a new answer needs.
 const answered = {
   'who-applies': (d) => filled(d['who-applies']),
-  'third-party': (d) => filled(d['third-party-name']),
+  'third-party': (d) =>
+    filled(d['third-party-name']) && addressComplete(d, 'third-party'),
   sector: (d) => ticksOrOther(d, 'sector'),
   ...Object.fromEntries(
     SUBSECTORS.map(({ page, field }) => [page, (d) => ticksOrOther(d, field)])
@@ -128,7 +136,13 @@ const answered = {
   'store-applied': (d) => storedAt(d).length > 0,
   'store-sites': (d) => storeSites(d).length > 0,
   'storage-addresses': (d) => storageAddresses(d).length > 0,
-  'store-3rd-party-contact': (d) => filled(d['store-3p-name']),
+  'store-3rd-party-contact': (d) =>
+    allFilled(d, [
+      'store-3p-name',
+      'store-3p-business',
+      'store-3p-telephone',
+      'store-3p-email'
+    ]),
   quantity: (d) => filled(d.quantity),
   'sell-amateur-quantity': (d) => filled(d['sell-amateur-quantity'])
 }
@@ -139,6 +153,7 @@ const withOther = (d, field) => [
   ...toArray(d[field]),
   ...(filled(d[field + '-other']) ? [d[field + '-other']] : [])
 ]
+// The international address, when given, replaces the GB one.
 const mainAddressLines = (d) =>
   filled(d['international-address'])
     ? d['international-address'].split(/\r?\n/).filter(filled)
@@ -276,6 +291,7 @@ const registrationSummary = (d) => ({
 })
 
 module.exports = {
+  mainAddressLines,
   STORE_NONE,
   SITE_ANOTHER,
   SUBSECTORS,
