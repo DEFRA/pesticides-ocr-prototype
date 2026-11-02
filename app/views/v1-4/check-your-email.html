@@ -23,3 +23,18 @@
   </div>
 </div>
 {% endblock %}
+
+{# Notify can't send the verification email in research, so the footer
+offers the link the email would contain. #}
+{% block footer %}
+  {% from "govuk/components/footer/macro.njk" import govukFooter %}
+  {{ govukFooter({
+    meta: {
+      items: [
+        { href: basePath + "/confirm-email", text: "Email verification link" },
+        { href: "/manage-prototype/clear-data", text: "Clear data" }
+      ],
+      visuallyHiddenTitle: "Footer links"
+    }
+  }) }}
+{% endblock %}
